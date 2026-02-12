@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Formatura Ideal • Painel do Aluno</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body class="dash-bg">
+  <header class="dash-header">
+    <div class="container dash-top">
+      <div class="dash-user">
+        <div class="avatar" aria-hidden="true">👤</div>
+        <div>
+          <div class="muted">Aluno</div>
+          <div class="dash-name" id="studentName">—</div>
+          <div class="dash-class muted" id="studentClass">—</div>
+        </div>
+      </div>
+
+      <div class="dash-actions">
+        <a class="btn btn-ghost" href="./index.html">Home</a>
+        <button class="btn btn-outline" id="btnLogout" type="button">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash">
+    <div class="container">
+      <div class="dash-grid">
+        <!-- Resumo -->
+        <section class="card" aria-label="Resumo Financeiro">
+          <div class="card-head">
+            <div>
+              <div class="muted">Resumo Financeiro</div>
+              <div class="h3" id="planName">—</div>
+            </div>
+            <span class="pill" id="paidPercentPill">Quitado: —%</span>
+          </div>
+
+          <div class="kpis">
+            <div class="kpi">
+              <div class="muted">Valor total</div>
+              <div class="kpi-value" id="totalValue">—</div>
+            </div>
+            <div class="kpi">
+              <div class="muted">Total pago</div>
+              <div class="kpi-value" id="paidValue">—</div>
+            </div>
+            <div class="kpi">
+              <div class="muted">Valor restante</div>
+              <div class="kpi-value" id="remainingValue">—</div>
+            </div>
+          </div>
+
+          <div class="progress-wrap">
+            <div class="progress" aria-label="Progresso de quitação">
+              <div class="progress-bar" id="progressBar" style="width:0%"></div>
+            </div>
+            <div class="progress-meta">
+              <span class="muted">Progresso</span>
+              <span class="muted" id="progressText">0%</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Fatura Atual -->
+        <section class="card" aria-label="Fatura Atual">
+          <div class="card-head">
+            <div>
+              <div class="muted">Fatura Atual</div>
+              <div class="h3">Cobrança do mês</div>
+            </div>
+            <span class="badge" id="currentStatusBadge">—</span>
+          </div>
+
+          <div class="invoice-box" id="currentInvoice">
+            <!-- preenchido via JS -->
+          </div>
+
+          <div class="invoice-actions">
+            <button class="btn btn-primary" id="btnPayNow" type="button">
+              Pagar Agora
+            </button>
+            <div class="muted small">
+              Ao pagar, um modal exibirá Pix e boleto (simulado).
+            </div>
+          </div>
+
+          <div id="payMsg" class="form-msg" role="alert" aria-live="polite"></div>
+        </section>
+
+        <!-- Histórico -->
+        <section class="card span-2" aria-label="Histórico de Parcelas">
+          <div class="card-head">
+            <div>
+              <div class="muted">Histórico de Parcelas</div>
+              <div class="h3">Parcelas</div>
+            </div>
+            <span class="pill" id="invoiceCount">—</span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table" id="invoicesTable">
+              <thead>
+                <tr>
+                  <th>Parcela</th>
+                  <th>Vencimento</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- linhas via JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Pagamento -->
+  <div class="modal" id="payModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close="true"></div>
+
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Pagamento">
+      <div class="modal-head">
+        <div>
+          <div class="muted">Pagamento</div>
+          <div class="h3">Finalize sua fatura</div>
+        </div>
+        <button class="icon-btn" type="button" data-close="true" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="pay-grid">
+          <div class="pay-qr card">
+            <div class="muted">QR Code Pix</div>
+            <div class="qr-box" id="qrBox" aria-label="Imagem de QR code (simulada)">
+              <!-- QR via JS -->
+            </div>
+            <div class="muted small">
+              Use o app do banco para escanear.
+            </div>
+          </div>
+
+          <div class="pay-info">
+            <div class="card">
+              <div class="muted">Pix copia e cola</div>
+              <div class="copy-row">
+                <input id="pixCode" type="text" readonly />
+                <button class="btn btn-outline btn-small" id="btnCopyPix" type="button">Copiar</button>
+              </div>
+              <div id="copyMsg" class="form-msg small" aria-live="polite"></div>
+            </div>
+
+            <div class="card">
+              <div class="muted">Boleto</div>
+              <a class="btn btn-ghost btn-block" id="boletoLink" href="#" target="_blank" rel="noopener">
+                Abrir link do boleto →
+              </a>
+              <div class="muted small">
+                Link demonstrativo (mock).
+              </div>
+            </div>
+
+            <div class="card glass">
+              <div class="muted">Detalhes da fatura</div>
+              <div class="pay-meta" id="payMeta">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-close="true">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./js/app.js"></script>
+  <script>
+    loadDashboard();
+  </script>
+</body>
+</html>
