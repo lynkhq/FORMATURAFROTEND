@@ -89,57 +89,6 @@ function clearSession() {
    Mock API (fetch wrapper)
    Mantém compatível com integração futura (Django)
 ------------------------- */
-const MOCK_DB = {
-  // Você pode adaptar para vir do backend depois
-  student: {
-    id: "stu_001",
-    name: "Eduardo Hort",
-    turma: "3º Ano • Terceirão 2026",
-    planName: "Plano Terceirão 2026",
-    total: 2400,
-    invoices: [
-      { parcela: 1, totalParcelas: 10, vencimento: "12/10/2025", valor: 240, status: "Pago" },
-      { parcela: 2, totalParcelas: 10, vencimento: "12/11/2025", valor: 240, status: "Pago" },
-      { parcela: 3, totalParcelas: 10, vencimento: "12/12/2025", valor: 240, status: "Pago" },
-      { parcela: 4, totalParcelas: 10, vencimento: "12/01/2026", valor: 240, status: "Pago" },
-      { parcela: 5, totalParcelas: 10, vencimento: "12/02/2026", valor: 240, status: "Aberto" },
-      { parcela: 6, totalParcelas: 10, vencimento: "12/03/2026", valor: 240, status: "Aberto" },
-      { parcela: 7, totalParcelas: 10, vencimento: "12/04/2026", valor: 240, status: "Aberto" },
-      { parcela: 8, totalParcelas: 10, vencimento: "12/05/2026", valor: 240, status: "Aberto" },
-      { parcela: 9, totalParcelas: 10, vencimento: "12/06/2026", valor: 240, status: "Aberto" },
-      { parcela: 10, totalParcelas: 10, vencimento: "12/07/2026", valor: 240, status: "Aberto" }
-    ]
-  }
-};
-
-async function apiFetch(url, options = {}) {
-  // Mantém a assinatura parecida com fetch
-  const method = (options.method || "GET").toUpperCase();
-  const body = options.body ? JSON.parse(options.body) : null;
-
-  // Simula latência
-  await new Promise(r => setTimeout(r, 550));
-
-  // Rotas mock
-  if (url === "/api/login" && method === "POST") {
-    const cpf = body?.cpf;
-    const password = body?.password;
-
-    // regra mock: senha "01012008" (DDMMAAAA) + cpf válido
-    if (cpf && isValidCPF(cpf) && password === "01012008") {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
-          token: "mock_token_abc123",
-          student: {
-            id: MOCK_DB.student.id,
-            name: MOCK_DB.student.name,
-            turma: MOCK_DB.student.turma
-          }
-        })
-      };
-    }
 
     return {
       ok: false,
@@ -214,39 +163,6 @@ async function apiFetch(url, options = {}) {
   };
 }
 
-/* Gera um “QR” fake em SVG (visual) */
-function buildMockQrSvg() {
-  // grade com “pixels” pseudo-aleatórios (determinístico o suficiente)
-  const size = 21;
-  let rects = "";
-  const seed = 7;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const v = (x * 31 + y * 17 + seed) % 11;
-      const isFinder =
-        (x < 7 && y < 7) || (x >= size - 7 && y < 7) || (x < 7 && y >= size - 7);
-
-      const on = isFinder ? (x === 0 || y === 0 || x === 6 || y === 6 || (x >= 2 && x <= 4 && y >= 2 && y <= 4))
-                          : (v === 0 || v === 3 || v === 7);
-
-      if (on) rects += `<rect x="${x}" y="${y}" width="1" height="1" rx="0.2"></rect>`;
-    }
-  }
-
-  return `
-  <svg viewBox="0 0 ${size} ${size}" width="180" height="180" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="rgba(212,175,55,0.95)"/>
-        <stop offset="1" stop-color="rgba(37,99,235,0.95)"/>
-      </linearGradient>
-    </defs>
-    <rect x="0" y="0" width="${size}" height="${size}" rx="2.2" fill="rgba(255,255,255,0.06)" />
-    <g fill="url(#g)">
-      ${rects}
-    </g>
-  </svg>`;
-}
 
 /* -------------------------
    Página Login
@@ -558,4 +474,5 @@ function wireModalClose() {
       closeModal("#payModal");
     }
   });
+
 } 
