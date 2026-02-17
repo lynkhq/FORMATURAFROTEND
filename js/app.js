@@ -10,6 +10,9 @@
 /* -------------------------
    Utils / Helpers
 ------------------------- */
+const API_BASE = "http://127.0.0.1:8000/api";
+
+
 function qs(sel) { return document.querySelector(sel); }
 function qsa(sel) { return Array.from(document.querySelectorAll(sel)); }
 
@@ -167,6 +170,14 @@ function clearSession() {
 /* -------------------------
    Página Login
 ------------------------- */
+function convertPasswordToDate(ddmmyyyy) {
+  const d = ddmmyyyy.slice(0,2);
+  const m = ddmmyyyy.slice(2,4);
+  const y = ddmmyyyy.slice(4,8);
+  return `${y}-${m}-${d}`;
+}
+
+
 function login() {
   const form = qs("#loginForm");
   const cpfInput = qs("#cpf");
@@ -176,7 +187,7 @@ function login() {
 
   // Se já estiver logado, manda pro painel
   const session = getSession();
-  if (session?.token) {
+if (session?.student_id) {
     window.location.href = "./aluno.html";
     return;
   }
@@ -217,20 +228,31 @@ function login() {
 
     try {
       // Mantém fetch() para integração futura. Aqui usamos apiFetch como mock.
-      const res = await apiFetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf: onlyDigits(cpf), password })
-      });
+      const res = await fetch(`${API_BASE}/login/`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    cpf: onlyDigits(cpf),
+    birth_date: convertPasswordToDate(password)
+  })
+});
+
 
       const data = await res.json();
+       
+   if (res.ok && data.ok) {
+  setSession({
+    student_id: data.student_id,
+    student_name: data.student_name,
+    turma: data.turma
+  });
 
-      if (res.ok) {
-        setSession({ token: data.token, student: data.student });
-        window.location.href = "./aluno.html";
-      } else {
-        setMsg(msg, "is-error", data.message || "Erro ao fazer login.");
-      }
+  window.location.href = "./aluno.html";
+} else {
+  setMsg(msg, "is-error", data.error || "Erro ao fazer login.");
+}
+
+      
     } catch (err) {
       setMsg(msg, "is-error", "Falha de conexão. Tente novamente.");
     } finally {
@@ -257,17 +279,29 @@ async function loadDashboard() {
   });
 
   // Busca dados do painel
-  let payload;
-  try {
-    const res = await apiFetch("/api/dashboard", { method: "GET" });
-    payload = await res.json();
-    if (!res.ok) throw new Error(payload?.message || "Erro ao carregar painel.");
-  } catch (e) {
-    // fallback: volta pro login se der ruim
-    clearSession();
-    window.location.href = "./login.html";
-    return;
+let payload;
+try {
+  const session = getSession();
+  const studentId = session?.student_id;
+
+  if (!studentId) {
+    throw new Error("Sessão inválida.");
   }
+
+  const res = await fetch(`http://127.0.0.1:8000/api/dashboard/${studentId}/`);
+
+  payload = await res.json();
+
+  if (!res.ok) {
+    throw new Error(payload?.error || "Erro ao carregar painel.");
+  }
+
+} catch (e) {
+  clearSession();
+  window.location.href = "./login.html";
+  return;
+}
+
 
   // Header
   qs("#studentName").textContent = payload.student.name;
@@ -476,3 +510,4 @@ function wireModalClose() {
   });
 
 } 
+
