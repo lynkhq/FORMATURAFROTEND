@@ -1,18 +1,19 @@
 /* =========================================================
-   app.js — JS puro (sem frameworks) com mocks de API via fetch
-   Funções solicitadas:
-   - login()
-   - loadDashboard()
-   - renderInvoices()
-   - createPayment()
+   app.js — Integração REAL (Django + PostgreSQL + Mercado Pago)
+   Rotas (backend):
+   - POST  http://127.0.0.1:8000/api/login/
+   - GET   http://127.0.0.1:8000/api/dashboard/<student_id>/
+   - POST  http://127.0.0.1:8000/api/invoices/<invoice_id>/pay   { method: "pix" | "boleto" }
 ========================================================= */
+
+/* -------------------------
+   Config
+------------------------- */
+const API_BASE = "http://127.0.0.1:8000/api";
 
 /* -------------------------
    Utils / Helpers
 ------------------------- */
-const API_BASE = "http://127.0.0.1:8000/api";
-
-
 function qs(sel) { return document.querySelector(sel); }
 function qsa(sel) { return Array.from(document.querySelectorAll(sel)); }
 
@@ -38,11 +39,11 @@ function formatCPF(value) {
   return out;
 }
 
-/* Validação básica de CPF (algoritmo oficial dos dígitos verificadores) */
+/* Validação básica de CPF (dígitos verificadores) */
 function isValidCPF(cpf) {
   const c = onlyDigits(cpf);
   if (!c || c.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(c)) return false; // todos iguais
+  if (/^(\d)\1{10}$/.test(c)) return false;
 
   const calcDV = (base) => {
     let sum = 0;
@@ -88,96 +89,29 @@ function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-/* -------------------------
-   Mock API (fetch wrapper)
-   Mantém compatível com integração futura (Django)
-------------------------- */
-
-    return {
-      ok: false,
-      status: 401,
-      json: async () => ({ message: "CPF ou senha inválidos. Verifique e tente novamente." })
-    };
-  }
-
-  if (url === "/api/dashboard" && method === "GET") {
-    const session = getSession();
-    if (!session?.token) {
-      return { ok: false, status: 401, json: async () => ({ message: "Não autenticado." }) };
-    }
-
-    const invoices = MOCK_DB.student.invoices;
-    const total = MOCK_DB.student.total;
-    const paid = invoices
-      .filter(i => i.status === "Pago")
-      .reduce((acc, i) => acc + i.valor, 0);
-
-    return {
-      ok: true,
-      status: 200,
-      json: async () => ({
-        student: {
-          name: MOCK_DB.student.name,
-          turma: MOCK_DB.student.turma
-        },
-        plan: {
-          name: MOCK_DB.student.planName,
-          total,
-          paid,
-          remaining: Math.max(total - paid, 0)
-        },
-        invoices
-      })
-    };
-  }
-
-  if (url === "/api/payments/create" && method === "POST") {
-    const session = getSession();
-    if (!session?.token) {
-      return { ok: false, status: 401, json: async () => ({ message: "Não autenticado." }) };
-    }
-
-    const invoice = body?.invoice; // {parcela, valor, vencimento}
-    if (!invoice?.parcela) {
-      return { ok: false, status: 400, json: async () => ({ message: "Fatura inválida." }) };
-    }
-
-    // mock payload de pagamento
-    return {
-      ok: true,
-      status: 201,
-      json: async () => ({
-        paymentId: "pay_" + Math.random().toString(16).slice(2),
-        pixCopyPaste:
-          "00020126580014BR.GOV.BCB.PIX0136mock-chave-pix-formatura-ideal-1234567890" +
-          "5204000053039865406" + String(invoice.valor).replace(".", "") +
-          "5802BR5920FORMatura IDEAL LTDA6009SAO PAULO62140510mockTxId6304ABCD",
-        boletoUrl: "https://example.com/boleto/mock-formatura-ideal",
-        qrSvg: buildMockQrSvg()
-      })
-    };
-  }
-
-  // fallback
-  return {
-    ok: false,
-    status: 404,
-    json: async () => ({ message: "Rota não encontrada (mock)." })
-  };
+/* Datas e status (backend -> UI) */
+function convertPasswordToDate(ddmmyyyy) {
+  const d = ddmmyyyy.slice(0, 2);
+  const m = ddmmyyyy.slice(2, 4);
+  const y = ddmmyyyy.slice(4, 8);
+  return `${y}-${m}-${d}`;
 }
 
+function formatBRDate(yyyy_mm_dd) {
+  const [y, m, d] = String(yyyy_mm_dd || "").split("-");
+  if (!y || !m || !d) return yyyy_mm_dd || "";
+  return `${d}/${m}/${y}`;
+}
+
+function mapStatus(status) {
+  if (status === "paid") return "Pago";
+  if (status === "overdue") return "Atrasado";
+  return "Aberto";
+}
 
 /* -------------------------
    Página Login
 ------------------------- */
-function convertPasswordToDate(ddmmyyyy) {
-  const d = ddmmyyyy.slice(0,2);
-  const m = ddmmyyyy.slice(2,4);
-  const y = ddmmyyyy.slice(4,8);
-  return `${y}-${m}-${d}`;
-}
-
-
 function login() {
   const form = qs("#loginForm");
   const cpfInput = qs("#cpf");
@@ -187,17 +121,15 @@ function login() {
 
   // Se já estiver logado, manda pro painel
   const session = getSession();
-if (session?.student_id) {
+  if (session?.student_id) {
     window.location.href = "./aluno.html";
     return;
   }
 
-  // máscara CPF automática
   cpfInput?.addEventListener("input", (e) => {
     e.target.value = formatCPF(e.target.value);
   });
 
-  // limitar senha para dígitos
   passInput?.addEventListener("input", (e) => {
     e.target.value = onlyDigits(e.target.value).slice(0, 8);
   });
@@ -205,10 +137,10 @@ if (session?.student_id) {
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     setMsg(msg, "is-info", "");
+
     const cpf = cpfInput.value;
     const password = passInput.value;
 
-    // validações
     if (!cpf || !password) {
       setMsg(msg, "is-error", "Preencha CPF e senha para continuar.");
       return;
@@ -222,37 +154,33 @@ if (session?.student_id) {
       return;
     }
 
-    // UI loading
     btn.disabled = true;
     btn.textContent = "Entrando...";
 
     try {
-      // Mantém fetch() para integração futura. Aqui usamos apiFetch como mock.
       const res = await fetch(`${API_BASE}/login/`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    cpf: onlyDigits(cpf),
-    birth_date: convertPasswordToDate(password)
-  })
-});
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cpf: onlyDigits(cpf),
+          birth_date: convertPasswordToDate(password),
+        }),
+      });
 
+      let data = {};
+      try { data = await res.json(); } catch { data = {}; }
 
-      const data = await res.json();
-       
-   if (res.ok && data.ok) {
-  setSession({
-    student_id: data.student_id,
-    student_name: data.student_name,
-    turma: data.turma
-  });
+      if (res.ok && data.ok) {
+        setSession({
+          student_id: data.student_id,
+          student_name: data.student_name,
+          turma: data.turma,
+        });
 
-  window.location.href = "./aluno.html";
-} else {
-  setMsg(msg, "is-error", data.error || "Erro ao fazer login.");
-}
-
-      
+        window.location.href = "./aluno.html";
+      } else {
+        setMsg(msg, "is-error", data.error || "CPF ou data de nascimento inválidos.");
+      }
     } catch (err) {
       setMsg(msg, "is-error", "Falha de conexão. Tente novamente.");
     } finally {
@@ -267,7 +195,8 @@ if (session?.student_id) {
 ------------------------- */
 async function loadDashboard() {
   const session = getSession();
-  if (!session?.token) {
+
+  if (!session?.student_id) {
     window.location.href = "./login.html";
     return;
   }
@@ -278,57 +207,54 @@ async function loadDashboard() {
     window.location.href = "./login.html";
   });
 
-  // Busca dados do painel
-let payload;
-try {
-  const session = getSession();
-  const studentId = session?.student_id;
+  let payload;
+  try {
+    const res = await fetch(`${API_BASE}/dashboard/${session.student_id}/`);
+    payload = await res.json();
 
-  if (!studentId) {
-    throw new Error("Sessão inválida.");
+    if (!res.ok || !payload.ok) {
+      throw new Error(payload?.error || "Erro ao carregar painel.");
+    }
+  } catch (e) {
+    clearSession();
+    window.location.href = "./login.html";
+    return;
   }
-
-  const res = await fetch(`http://127.0.0.1:8000/api/dashboard/${studentId}/`);
-
-  payload = await res.json();
-
-  if (!res.ok) {
-    throw new Error(payload?.error || "Erro ao carregar painel.");
-  }
-
-} catch (e) {
-  clearSession();
-  window.location.href = "./login.html";
-  return;
-}
-
 
   // Header
   qs("#studentName").textContent = payload.student.name;
   qs("#studentClass").textContent = payload.student.turma;
 
-  // Resumo
-  qs("#planName").textContent = payload.plan.name;
-  qs("#totalValue").textContent = moneyBRL(payload.plan.total);
-  qs("#paidValue").textContent = moneyBRL(payload.plan.paid);
-  qs("#remainingValue").textContent = moneyBRL(payload.plan.remaining);
+  // Resumo (backend -> contract)
+  qs("#planName").textContent = `Plano da turma ${payload.student.turma}`;
+  qs("#totalValue").textContent = moneyBRL(payload.contract.plan_total);
+  qs("#paidValue").textContent = moneyBRL(payload.contract.paid_total);
+  qs("#remainingValue").textContent = moneyBRL(payload.contract.remaining_total);
 
-  const percent = payload.plan.total > 0
-    ? Math.round((payload.plan.paid / payload.plan.total) * 100)
-    : 0;
-
+  const percent = Number(payload.contract.progress_percent || 0);
   qs("#paidPercentPill").innerHTML = `Quitado: <strong>${percent}%</strong>`;
   qs("#progressText").textContent = `${percent}%`;
 
-  // anima a barra (pequeno delay para transição)
   requestAnimationFrame(() => {
     setTimeout(() => {
       qs("#progressBar").style.width = `${percent}%`;
     }, 80);
   });
 
-  // Fatura atual: pega a primeira em Aberto, senão a última Pago
-  const invoices = payload.invoices || [];
+  // Converter invoices do backend para o formato que a UI já usa
+  const totalParcelas = payload.contract.installments;
+
+  const invoices = (payload.invoices || []).map(inv => ({
+    id: inv.id,
+    parcela: inv.number,
+    totalParcelas,
+    vencimento: formatBRDate(inv.due_date),
+    valor: Number(inv.value),
+    status: mapStatus(inv.status),
+    boleto_url: inv.boleto_url,
+    pix_payload: inv.pix_payload,
+  }));
+
   const current = invoices.find(i => i.status !== "Pago") || invoices[invoices.length - 1];
 
   renderCurrentInvoice(current);
@@ -338,7 +264,10 @@ try {
   const btnPay = qs("#btnPayNow");
   const payMsg = qs("#payMsg");
 
-  if (current?.status === "Pago") {
+  if (!current) {
+    btnPay.disabled = true;
+    setMsg(payMsg, "is-info", "Nenhuma fatura encontrada.");
+  } else if (current.status === "Pago") {
     btnPay.disabled = true;
     setMsg(payMsg, "is-info", "Sua fatura atual já está paga.");
   } else {
@@ -348,7 +277,7 @@ try {
 
   btnPay?.addEventListener("click", async () => {
     if (!current) return;
-    await createPayment(current);
+    await createPayment(current, "pix"); // padrão: pix
   });
 
   // Modal close handlers
@@ -359,9 +288,15 @@ function renderCurrentInvoice(inv) {
   const box = qs("#currentInvoice");
   const badge = qs("#currentStatusBadge");
 
-  if (!inv || !box) return;
+  if (!box) return;
 
-  // badge
+  if (!inv) {
+    badge.className = "badge";
+    badge.textContent = "—";
+    box.innerHTML = "";
+    return;
+  }
+
   const map = {
     "Pago": { cls: "badge-success", label: "Pago" },
     "Aberto": { cls: "badge-info", label: "Aberto" },
@@ -400,8 +335,9 @@ function renderInvoices(invoices) {
 
   tbody.innerHTML = invoices.map(inv => {
     const cls = inv.status === "Pago" ? "row-status row-paid"
-              : inv.status === "Atrasado" ? "row-status row-late"
-              : "row-status row-open";
+      : inv.status === "Atrasado" ? "row-status row-late"
+        : "row-status row-open";
+
     return `
       <tr>
         <td>${inv.parcela}/${inv.totalParcelas}</td>
@@ -414,9 +350,14 @@ function renderInvoices(invoices) {
 }
 
 /* -------------------------
-   Criar pagamento + modal
+   Criar pagamento + modal (Mercado Pago)
 ------------------------- */
-async function createPayment(currentInvoice) {
+function buildQrImgFromBase64(base64) {
+  if (!base64) return `<div class="muted">QR não disponível.</div>`;
+  return `<img alt="QR Code Pix" style="max-width:180px; width:180px; height:180px;" src="data:image/png;base64,${base64}" />`;
+}
+
+async function createPayment(currentInvoice, method = "pix") {
   const payMsg = qs("#payMsg");
   const btnPay = qs("#btnPayNow");
   setMsg(payMsg, "is-info", "");
@@ -425,32 +366,44 @@ async function createPayment(currentInvoice) {
   btnPay.textContent = "Gerando pagamento...";
 
   try {
-    const res = await apiFetch("/api/payments/create", {
+    const res = await fetch(`${API_BASE}/invoices/${currentInvoice.id}/pay`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ invoice: currentInvoice })
+      body: JSON.stringify({ method })
     });
 
-    const data = await res.json();
+    let data = {};
+    try { data = await res.json(); } catch { data = {}; }
 
-    if (!res.ok) {
-      setMsg(payMsg, "is-error", data.message || "Erro ao criar pagamento.");
+    if (!res.ok || !data.ok) {
+      setMsg(payMsg, "is-error", data.error || "Erro ao criar pagamento.");
       return;
     }
 
-    // Preenche modal
-    qs("#pixCode").value = data.pixCopyPaste || "";
-    qs("#boletoLink").href = data.boletoUrl || "#";
-    qs("#qrBox").innerHTML = data.qrSvg || buildMockQrSvg();
+    // PIX
+    const pixCopyPaste = data.pix_copia_cola || "";
+    const pixQrBase64 = data.pix_qr_base64 || "";
 
+    qs("#pixCode").value = pixCopyPaste;
+    qs("#qrBox").innerHTML = pixQrBase64 ? buildQrImgFromBase64(pixQrBase64) : `<div class="muted">QR não disponível.</div>`;
+
+    // BOLETO
+    const boletoUrl = data.boleto_url || "";
+    const boletoLink = qs("#boletoLink");
+    boletoLink.href = boletoUrl || "#";
+    boletoLink.style.pointerEvents = boletoUrl ? "auto" : "none";
+    boletoLink.style.opacity = boletoUrl ? "1" : ".6";
+
+    // Meta
     qs("#payMeta").innerHTML = `
       <div><span class="muted">Parcela:</span> <strong>${currentInvoice.parcela}/${currentInvoice.totalParcelas}</strong></div>
       <div><span class="muted">Valor:</span> <strong>${moneyBRL(currentInvoice.valor)}</strong></div>
       <div><span class="muted">Vencimento:</span> <strong>${currentInvoice.vencimento}</strong></div>
-      <div><span class="muted">ID:</span> <strong>${data.paymentId}</strong></div>
+      <div><span class="muted">Tipo:</span> <strong>${data.type || method}</strong></div>
+      <div><span class="muted">MP ID:</span> <strong>${data.mp_payment_id || "—"}</strong></div>
     `;
 
-    // copiar pix
+    // Copiar Pix
     const copyBtn = qs("#btnCopyPix");
     const copyMsg = qs("#copyMsg");
 
@@ -465,6 +418,7 @@ async function createPayment(currentInvoice) {
     };
 
     openModal("#payModal");
+
   } catch (e) {
     setMsg(payMsg, "is-error", "Falha de conexão. Tente novamente.");
   } finally {
@@ -508,6 +462,8 @@ function wireModalClose() {
       closeModal("#payModal");
     }
   });
+}
 
-} 
-
+/* Expõe funções globalmente (login.html e aluno.html chamam direto) */
+window.login = login;
+window.loadDashboard = loadDashboard;
