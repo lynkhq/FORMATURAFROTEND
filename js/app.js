@@ -9,7 +9,7 @@
 /* -------------------------
    Config
 ------------------------- */
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = "https://formatura-backend-production.up.railway.app/api";
 
 /* -------------------------
    Utils / Helpers
@@ -467,3 +467,4 @@ function wireModalClose() {
 /* Expõe funções globalmente (login.html e aluno.html chamam direto) */
 window.login = login;
 window.loadDashboard = loadDashboard;
+
