@@ -1,9 +1,9 @@
 /* =========================================================
    app.js — Integração REAL (Django + PostgreSQL + Mercado Pago)
    Rotas (backend):
-   - POST  http://127.0.0.1:8000/api/login/
-   - GET   http://127.0.0.1:8000/api/dashboard/<student_id>/
-   - POST  http://127.0.0.1:8000/api/invoices/<invoice_id>/pay   { method: "pix" | "boleto" }
+   - POST  https://formatura-backend-production.up.railway.app/api/login/
+   - GET   https://formatura-backend-production.up.railway.app/api/dashboard/<student_id>/
+   - POST  https://formatura-backend-production.up.railway.app/api/invoices/<invoice_id>/pay/   { method: "pix" | "boleto" }
 ========================================================= */
 
 /* -------------------------
@@ -168,7 +168,9 @@ function login() {
       });
 
       let data = {};
-      try { data = await res.json(); } catch { data = {}; }
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("application/json")) data = await res.json();
+      else data = { ok: false, error: await res.text() };
 
       if (res.ok && data.ok) {
         setSession({
@@ -366,14 +368,23 @@ async function createPayment(currentInvoice, method = "pix") {
   btnPay.textContent = "Gerando pagamento...";
 
   try {
-    const res = await fetch(`${API_BASE}/invoices/${currentInvoice.id}/pay`, {
+    // ✅ IMPORTANTE: barra final /pay/
+    const url = `${API_BASE}/invoices/${currentInvoice.id}/pay/`;
+
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ method })
     });
 
     let data = {};
-    try { data = await res.json(); } catch { data = {}; }
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const txt = await res.text();
+      data = { ok: false, error: txt || "Resposta inválida do servidor." };
+    }
 
     if (!res.ok || !data.ok) {
       setMsg(payMsg, "is-error", data.error || "Erro ao criar pagamento.");
@@ -385,7 +396,9 @@ async function createPayment(currentInvoice, method = "pix") {
     const pixQrBase64 = data.pix_qr_base64 || "";
 
     qs("#pixCode").value = pixCopyPaste;
-    qs("#qrBox").innerHTML = pixQrBase64 ? buildQrImgFromBase64(pixQrBase64) : `<div class="muted">QR não disponível.</div>`;
+    qs("#qrBox").innerHTML = pixQrBase64
+      ? buildQrImgFromBase64(pixQrBase64)
+      : `<div class="muted">QR não disponível.</div>`;
 
     // BOLETO
     const boletoUrl = data.boleto_url || "";
@@ -418,7 +431,6 @@ async function createPayment(currentInvoice, method = "pix") {
     };
 
     openModal("#payModal");
-
   } catch (e) {
     setMsg(payMsg, "is-error", "Falha de conexão. Tente novamente.");
   } finally {
@@ -467,4 +479,3 @@ function wireModalClose() {
 /* Expõe funções globalmente (login.html e aluno.html chamam direto) */
 window.login = login;
 window.loadDashboard = loadDashboard;
-
