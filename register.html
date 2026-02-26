@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Formatura Ideal • Cadastro</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body class="auth-bg">
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="./index.html" aria-label="Formatura Ideal - Home">
+        <span class="brand-mark" aria-hidden="true">FI</span>
+        <span class="brand-name">Formatura Ideal</span>
+      </a>
+
+      <nav class="nav">
+        <a class="nav-link" href="./index.html">Home</a>
+        <a class="nav-link nav-cta" href="./login.html">Área do Aluno</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="auth">
+    <div class="container auth-grid">
+      <section class="auth-aside">
+        <span class="chip">Cadastro Completo</span>
+        <h1>Crie seu acesso</h1>
+        <p class="muted">
+          Preencha seus dados. Após cadastrar, você será redirecionado para o login.
+        </p>
+
+        <div class="card auth-tip">
+          <div class="h4">Atenção</div>
+          <p class="muted">
+            Use um e-mail válido e crie uma senha. O CPF deve ser real e válido.
+          </p>
+        </div>
+      </section>
+
+      <section class="card auth-card" aria-label="Formulário de cadastro">
+        <div class="card-head">
+          <div>
+            <div class="muted">Cadastro</div>
+            <div class="h3">Dados do aluno</div>
+          </div>
+          <span class="badge badge-info">Seguro</span>
+        </div>
+
+        <form id="registerForm" class="form" novalidate>
+          <label class="field">
+            <span class="label">Nome do aluno</span>
+            <input id="student_name" name="student_name" type="text" placeholder="Nome completo" required />
+          </label>
+
+          <label class="field">
+            <span class="label">CPF</span>
+            <input id="cpf" name="cpf" type="text" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" required />
+          </label>
+
+          <label class="field">
+            <span class="label">Data de nascimento</span>
+            <input id="birth_date" name="birth_date" type="date" required />
+            <span class="hint">Formato: AAAA-MM-DD (o campo já garante).</span>
+          </label>
+
+          <label class="field">
+            <span class="label">Nome do responsável</span>
+            <input id="responsible_name" name="responsible_name" type="text" placeholder="Nome do responsável" required />
+          </label>
+
+          <label class="field">
+            <span class="label">Turma</span>
+            <input id="turma" name="turma" type="text" placeholder="Ex.: Terceirão 2026" required />
+          </label>
+
+          <label class="field">
+            <span class="label">E-mail</span>
+            <input id="email" name="email" type="email" placeholder="email@exemplo.com" required />
+          </label>
+
+          <label class="field">
+            <span class="label">Senha</span>
+            <input id="password" name="password" type="password" placeholder="Crie uma senha" minlength="6" required />
+            <span class="hint">Mínimo recomendado: 6 caracteres.</span>
+          </label>
+
+          <label class="field">
+            <span class="label">Confirmar senha</span>
+            <input id="confirm_password" name="confirm_password" type="password" placeholder="Repita a senha" minlength="6" required />
+          </label>
+
+          <button class="btn btn-primary btn-block" id="btnRegister" type="submit">
+            Criar conta
+          </button>
+
+          <div id="registerMsg" class="form-msg" role="alert" aria-live="polite"></div>
+
+          <div class="divider"></div>
+          <a class="btn btn-ghost btn-block" href="./login.html">Já tenho conta • Entrar</a>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script src="./js/api.js"></script>
+  <script src="./js/register.js"></script>
+</body>
+</html>

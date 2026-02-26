@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Formatura Ideal • Cartão</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body class="dash-bg">
+  <header class="dash-header">
+    <div class="container dash-top">
+      <div class="dash-user">
+        <div class="avatar" aria-hidden="true">💳</div>
+        <div>
+          <div class="muted">Pagamento</div>
+          <div class="dash-name">Cartão</div>
+          <div class="dash-class muted" id="cardInfo">—</div>
+        </div>
+      </div>
+      <div class="dash-actions">
+        <a class="btn btn-ghost" href="./checkout.html">Voltar</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash">
+    <div class="container">
+      <section class="card">
+        <div class="h3">Página Cartão (placeholder)</div>
+        <p class="muted">
+          Contract ID: <strong id="contractId">—</strong>
+        </p>
+        <p class="muted">
+          Aqui você pode colocar um formulário de cartão / link de checkout quando o backend retornar.
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const id = localStorage.getItem("fi_contract_id") || "—";
+    document.getElementById("contractId").textContent = id;
+  </script>
+</body>
+</html>

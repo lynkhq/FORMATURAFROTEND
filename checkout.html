@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Formatura Ideal • Checkout</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body class="dash-bg">
+  <header class="dash-header">
+    <div class="container dash-top">
+      <div class="dash-user">
+        <div class="avatar" aria-hidden="true">🧾</div>
+        <div>
+          <div class="muted">Checkout</div>
+          <div class="dash-name" id="checkoutTitle">Plano</div>
+          <div class="dash-class muted" id="checkoutSubtitle">—</div>
+        </div>
+      </div>
+
+      <div class="dash-actions">
+        <a class="btn btn-ghost" href="./index.html">Home</a>
+        <button class="btn btn-outline" id="btnLogout" type="button">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash">
+    <div class="container">
+      <div class="dash-grid">
+        <section class="card" aria-label="Resumo do plano">
+          <div class="card-head">
+            <div>
+              <div class="muted">Resumo</div>
+              <div class="h3" id="planName">—</div>
+            </div>
+            <span class="pill" id="planPill">—</span>
+          </div>
+
+          <div class="kpis">
+            <div class="kpi">
+              <div class="muted">Total</div>
+              <div class="kpi-value" id="planTotal">—</div>
+            </div>
+            <div class="kpi">
+              <div class="muted">Vencimento (dia)</div>
+              <div class="kpi-value" id="planDueDay">—</div>
+            </div>
+            <div class="kpi">
+              <div class="muted">Máx. parcelas</div>
+              <div class="kpi-value" id="planMaxInstallments">—</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <label class="field">
+            <span class="label">Escolha o número de parcelas</span>
+            <select id="installments" style="width:100%; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:#000; color:#fff;">
+              <option value="">Carregando...</option>
+            </select>
+            <span class="hint">Ao mudar parcelas, atualizamos o preview automaticamente.</span>
+          </label>
+
+          <div id="previewMsg" class="form-msg" role="alert" aria-live="polite"></div>
+        </section>
+
+        <section class="card" aria-label="Preview de vencimentos">
+          <div class="card-head">
+            <div>
+              <div class="muted">Preview</div>
+              <div class="h3">Tabela de vencimentos</div>
+            </div>
+            <span class="badge badge-info" id="previewBadge">—</span>
+          </div>
+
+          <div class="table-wrap" style="margin-top:12px;">
+            <table class="table" id="previewTable">
+              <thead>
+                <tr>
+                  <th>Parcela</th>
+                  <th>Vencimento</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="3" class="muted">Selecione as parcelas para ver o preview.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="divider"></div>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btnPix" type="button" disabled>Pagar com Pix</button>
+            <button class="btn btn-outline" id="btnCard" type="button" disabled>Pagar com Cartão</button>
+          </div>
+
+          <div id="confirmMsg" class="form-msg" role="alert" aria-live="polite"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="./js/api.js"></script>
+  <script src="./js/checkout.js"></script>
+</body>
+</html>

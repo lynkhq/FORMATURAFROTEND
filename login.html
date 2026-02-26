@@ -25,17 +25,18 @@
     <div class="container auth-grid">
       <section class="auth-aside">
         <span class="chip">Área do Aluno</span>
-        <h1>Acesse seu painel financeiro</h1>
+        <h1>Acesse com CPF e senha</h1>
         <p class="muted">
-          Entre com seu CPF e a data de nascimento (DDMMAAAA). Você verá seu plano,
-          fatura atual e histórico de parcelas.
+          Entre com seu CPF e sua senha cadastrada. Após login, você seguirá para o checkout
+          para escolher parcelas e método de pagamento.
         </p>
 
         <div class="card auth-tip">
-          <div class="h4">Dica</div>
+          <div class="h4">Não tem conta?</div>
           <p class="muted">
-            Para testar o mock: use um CPF válido (qualquer CPF válido) e senha <strong>01012008</strong>.
+            Faça seu cadastro completo para criar acesso.
           </p>
+          <a class="btn btn-primary" href="./register.html">Criar conta →</a>
         </div>
       </section>
 
@@ -70,13 +71,11 @@
               id="password"
               name="password"
               type="password"
-              inputmode="numeric"
               autocomplete="current-password"
-              placeholder="Data de nascimento (DDMMAAAA)"
-              maxlength="8"
+              placeholder="Sua senha"
               required
             />
-            <span class="hint">Ex.: 14052008</span>
+            <span class="hint">Use a senha criada no cadastro.</span>
           </label>
 
           <button class="btn btn-primary btn-block" id="btnLogin" type="submit">
@@ -88,15 +87,15 @@
           <div class="auth-foot muted">
             Ao entrar, você concorda com as políticas de uso do sistema.
           </div>
+
+          <div class="divider"></div>
+          <a class="btn btn-ghost btn-block" href="./register.html">Não tenho conta • Cadastrar</a>
         </form>
       </section>
     </div>
   </main>
 
-  <script src="./js/app.js"></script>
-  <script>
-    // inicia comportamento da página
-    login();
-  </script>
+  <script src="./js/api.js"></script>
+  <script src="./js/login.js"></script>
 </body>
 </html>
