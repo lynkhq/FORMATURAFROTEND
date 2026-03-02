@@ -1,33 +1,22 @@
 /* =========================================================
-   api.js — util de API com token (produção GitHub Pages)
-   Endpoints:
-   - POST /api/login/
-   - POST /api/register/
-   - GET  /api/plan/for-student/   (Authorization: Bearer <token>)
-   - POST /api/contract/preview/   { installments }
-   - POST /api/contract/confirm/   { installments, payment_method }
+   api.js — util de API (sem token)
+   Backend retorna { ok:true, student_id, student_name } no login
 ========================================================= */
 
 (function () {
-  // ✅ Backend Railway
   const API_ORIGIN = "https://formatura-backend-production.up.railway.app";
-  const API_PREFIX = "/api"; // mantém /api separado pra evitar erro de concatenação
+  const API_PREFIX = "/api";
   const API_BASE = `${API_ORIGIN}${API_PREFIX}`;
 
-  const TOKEN_KEY = "fi_token";
+  const SESSION_KEY = "fi_session"; // guarda {student_id, student_name}
 
   function qs(sel) { return document.querySelector(sel); }
 
-  function onlyDigits(str) {
-    return String(str || "").replace(/\D/g, "");
-  }
+  function onlyDigits(str) { return String(str || "").replace(/\D/g, ""); }
 
   function formatCPF(value) {
     const d = onlyDigits(value).slice(0, 11);
-    const p1 = d.slice(0, 3);
-    const p2 = d.slice(3, 6);
-    const p3 = d.slice(6, 9);
-    const p4 = d.slice(9, 11);
+    const p1 = d.slice(0, 3), p2 = d.slice(3, 6), p3 = d.slice(6, 9), p4 = d.slice(9, 11);
     let out = p1;
     if (p2) out += "." + p2;
     if (p3) out += "." + p3;
@@ -53,63 +42,45 @@
     el.textContent = text;
   }
 
-  function setToken(token) {
-    if (!token) return;
-    localStorage.setItem(TOKEN_KEY, token);
+  function setSession(session) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session || {}));
   }
-  function getToken() {
-    return localStorage.getItem(TOKEN_KEY) || "";
+  function getSession() {
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "{}"); }
+    catch { return {}; }
   }
-  function clearToken() {
-    localStorage.removeItem(TOKEN_KEY);
+  function clearSession() {
+    localStorage.removeItem(SESSION_KEY);
   }
 
   function normalizePath(path) {
-    // garante que path começa com "/"
     let p = String(path || "");
     if (!p.startsWith("/")) p = "/" + p;
     return p;
   }
 
   async function apiFetch(path, options = {}) {
-    const token = getToken();
+    const session = getSession();
     const headers = Object.assign(
       { "Content-Type": "application/json" },
       options.headers || {}
     );
 
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    // Se o backend aceitar identificar aluno por header (opcional)
+    if (session?.student_id) headers["X-Student-Id"] = String(session.student_id);
 
     const url = `${API_BASE}${normalizePath(path)}`;
 
-    const res = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const res = await fetch(url, { ...options, headers });
 
     const ct = res.headers.get("content-type") || "";
     let data;
 
-    // tenta JSON, senão texto
-    if (ct.includes("application/json")) {
-      try {
-        data = await res.json();
-      } catch {
-        data = { ok: false, error: "Resposta JSON inválida." };
-      }
-    } else {
-      const txt = await res.text();
-      data = { ok: false, error: txt };
-    }
+    if (ct.includes("application/json")) data = await res.json();
+    else data = { ok: false, error: await res.text() };
 
     if (!res.ok) {
-      // tenta extrair msg útil
-      const msg =
-        data?.error ||
-        data?.detail ||
-        (typeof data === "string" ? data : "") ||
-        `Erro na requisição (${res.status}).`;
-
+      const msg = data?.error || data?.detail || `Erro (${res.status}).`;
       const err = new Error(msg);
       err.status = res.status;
       err.data = data;
@@ -120,7 +91,16 @@
     return data;
   }
 
-  // Exporta no window
+  // helper: exige login
+  function requireLogin() {
+    const s = getSession();
+    if (!s?.student_id) {
+      window.location.href = "./login.html";
+      return null;
+    }
+    return s;
+  }
+
   window.API = {
     API_ORIGIN,
     API_BASE,
@@ -129,9 +109,10 @@
     formatCPF,
     moneyBRL,
     setMsg,
-    setToken,
-    getToken,
-    clearToken,
+    setSession,
+    getSession,
+    clearSession,
+    requireLogin,
     apiFetch,
   };
 })();
