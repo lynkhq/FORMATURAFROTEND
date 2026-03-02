@@ -1,5 +1,13 @@
 (function () {
-  const { qs, setMsg, moneyBRL, apiFetch, clearSession, requireLogin, getSession } = window.API;
+  const {
+    qs,
+    setMsg,
+    moneyBRL,
+    apiFetch,
+    clearSession,
+    requireLogin,
+    getSession,
+  } = window.API;
 
   // exige sessão
   const session = requireLogin();
@@ -28,8 +36,6 @@
   const btnCard = qs("#btnCard");
   const confirmMsg = qs("#confirmMsg");
 
-  let currentMax = 0;
-  let currentPlan = null;
   let currentInstallments = 0;
   let previewOk = false;
 
@@ -78,31 +84,22 @@
     setConfirmEnabled(false);
 
     try {
-      // ✅ Como o backend pode precisar saber "qual aluno",
-      // a gente já injeta X-Student-Id no apiFetch (via api.js),
-      // mas também envio no query/body caso seu backend use isso.
       const sid = getSession()?.student_id;
 
-      // tenta GET padrão
-      let data;
-      try {
-        data = await apiFetch("/plan/for-student/", { method: "GET" });
-      } catch (e) {
-        // fallback: alguns backends usam query param
-        data = await apiFetch(`/plan/for-student/?student_id=${encodeURIComponent(sid)}`, { method: "GET" });
-      }
+      // ✅ tente com querystring (mais comum)
+      const data = await apiFetch(`/plan/for-student/?student_id=${encodeURIComponent(sid)}`, {
+        method: "GET",
+      });
 
-      currentPlan = data?.plan || data;
+      const plan = data?.plan || data;
 
-      const total = currentPlan?.total ?? currentPlan?.plan_total ?? currentPlan?.value_total ?? 0;
-      const dueDay = currentPlan?.due_day ?? currentPlan?.dueDay ?? currentPlan?.vencimento_dia ?? "—";
-      const maxInstallments = Number(currentPlan?.max_installments ?? currentPlan?.maxInstallments ?? currentPlan?.installments_max ?? 1);
-
-      currentMax = maxInstallments;
+      const total = plan?.total ?? plan?.plan_total ?? plan?.value_total ?? 0;
+      const dueDay = plan?.due_day ?? plan?.dueDay ?? "—";
+      const maxInstallments = Number(plan?.max_installments ?? plan?.maxInstallments ?? 1);
 
       titleEl.textContent = "Plano";
       subtitleEl.textContent = "Escolha parcelas e método";
-      planNameEl.textContent = currentPlan?.name || `Plano da turma`;
+      planNameEl.textContent = plan?.name || `Plano da turma`;
       planTotalEl.textContent = moneyBRL(total);
       planDueDayEl.textContent = String(dueDay);
       planMaxInstallmentsEl.textContent = String(maxInstallments);
@@ -114,14 +111,11 @@
       previewBadge.className = "badge badge-info";
       previewBadge.textContent = "Selecione parcelas";
     } catch (err) {
-      // Sem token agora: se falhar, manda pro login
-      // (pode ser sessão ausente ou backend recusou)
       if (err.status === 401 || err.status === 403) {
         clearSession();
         window.location.href = "./login.html";
         return;
       }
-
       previewBadge.className = "badge badge-danger";
       previewBadge.textContent = "Erro";
       setMsg(previewMsg, "is-error", err.message || "Erro ao carregar plano.");
@@ -151,14 +145,12 @@
       const data = await apiFetch("/contract/preview/", {
         method: "POST",
         body: JSON.stringify({
-          student_id: sid,                // ✅ envia também no body (se backend precisar)
+          student_id: sid,
           installments: Number(installments),
         }),
       });
 
-      if (data?.ok === false) {
-        throw new Error(data?.error || "Não foi possível gerar preview.");
-      }
+      if (data?.ok === false) throw new Error(data?.error || "Não foi possível gerar preview.");
 
       const schedule =
         data?.schedule ||
@@ -179,7 +171,6 @@
         window.location.href = "./login.html";
         return;
       }
-
       previewBadge.className = "badge badge-danger";
       previewBadge.textContent = "Erro";
       setMsg(previewMsg, "is-error", err.message || "Erro ao gerar preview.");
@@ -191,7 +182,6 @@
 
   async function confirmContract(payment_method) {
     setMsg(confirmMsg, "is-info", "");
-    setMsg(previewMsg, "is-info", "");
 
     if (!previewOk || !currentInstallments) {
       setMsg(confirmMsg, "is-error", "Selecione parcelas e aguarde o preview ficar OK antes de confirmar.");
@@ -211,15 +201,13 @@
       const data = await apiFetch("/contract/confirm/", {
         method: "POST",
         body: JSON.stringify({
-          student_id: sid,                 // ✅ envia também no body
+          student_id: sid,
           installments: Number(currentInstallments),
           payment_method,
         }),
       });
 
-      if (data?.ok === false) {
-        throw new Error(data?.error || "Não foi possível confirmar contrato.");
-      }
+      if (data?.ok === false) throw new Error(data?.error || "Não foi possível confirmar contrato.");
 
       const contractId =
         data?.contract_id ||
@@ -234,7 +222,6 @@
 
       if (payment_method === "pix") window.location.href = "./pix.html";
       else window.location.href = "./card.html";
-
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
         clearSession();
