@@ -53,10 +53,16 @@
             <input id="student_name" name="student_name" type="text" placeholder="Nome completo" required />
           </label>
 
-          <label class="field">
-            <span class="label">CPF</span>
-            <input id="cpf" name="cpf" type="text" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" required />
-          </label>
+<label class="field">
+  <span class="label">Turma</span>
+  <select id="turma" name="turma" required
+    style="width:100%; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:#000; color:#fff;">
+    <option value="">Selecione a turma...</option>
+    <option value="Terceirão">Terceirão</option>
+    
+  </select>
+  <span class="hint">Escolha exatamente a turma cadastrada no sistema.</span>
+</label>
 
           <label class="field">
             <span class="label">Data de nascimento</span>
@@ -106,4 +112,5 @@
   <script src="./js/api.js"></script>
   <script src="./js/register.js"></script>
 </body>
+
 </html>
