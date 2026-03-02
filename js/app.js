@@ -1,9 +1,9 @@
 /* =========================================================
    app.js — Integração REAL (Django + PostgreSQL + Mercado Pago)
    Rotas (backend):
-   - POST  https://formatura-backend-production.up.railway.app/api/login/
-   - GET   https://formatura-backend-production.up.railway.app/api/dashboard/<student_id>/
-   - POST  https://formatura-backend-production.up.railway.app/api/invoices/<invoice_id>/pay/   { method: "pix" | "boleto" }
+   - POST  http://127.0.0.1:8000/api/login/
+   - GET   http://127.0.0.1:8000/api/dashboard/<student_id>/
+   - POST  http://127.0.0.1:8000/api/invoices/<invoice_id>/pay   { method: "pix" | "boleto" }
 ========================================================= */
 
 /* -------------------------
@@ -40,27 +40,27 @@ function formatCPF(value) {
 }
 
 /* Validação básica de CPF (dígitos verificadores) */
-function isValidCPF(cpf) {
-  const c = onlyDigits(cpf);
-  if (!c || c.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(c)) return false;
+//function isValidCPF(cpf) {
+//  const c = onlyDigits(cpf);
+//  if (!c || c.length !== 11) return false;
+//  if (/^(\d)\1{10}$/.test(c)) return false;
 
-  const calcDV = (base) => {
-    let sum = 0;
-    for (let i = 0; i < base.length; i++) {
-      sum += Number(base[i]) * (base.length + 1 - i);
-    }
-    const mod = sum % 11;
-    return (mod < 2) ? 0 : 11 - mod;
-  };
+//  const calcDV = (base) => {
+ //   let sum = 0;
+ //   for (let i = 0; i < base.length; i++) {
+ //     sum += Number(base[i]) * (base.length + 1 - i);
+///    }
+//    const mod = sum % 11;
+//    return (mod < 2) ? 0 : 11 - mod;
+//  };
+//
+ // const base9 = c.slice(0, 9);
+ // const dv1 = calcDV(base9);
+ // const base10 = c.slice(0, 10);
+  //const dv2 = calcDV(base10);
 
-  const base9 = c.slice(0, 9);
-  const dv1 = calcDV(base9);
-  const base10 = c.slice(0, 10);
-  const dv2 = calcDV(base10);
-
-  return c === (base9 + String(dv1) + String(dv2));
-}
+//  return c === (base9 + String(dv1) + String(dv2));
+//}
 
 function setMsg(el, type, text) {
   if (!el) return;
@@ -145,10 +145,10 @@ function login() {
       setMsg(msg, "is-error", "Preencha CPF e senha para continuar.");
       return;
     }
-    if (!isValidCPF(cpf)) {
-      setMsg(msg, "is-error", "CPF inválido. Verifique e tente novamente.");
-      return;
-    }
+   // if (!isValidCPF(cpf)) {
+    //  setMsg(msg, "is-error", "CPF inválido. Verifique e tente novamente.");
+    //  return;
+   // }
     if (onlyDigits(password).length !== 8) {
       setMsg(msg, "is-error", "A senha deve ser a data de nascimento no formato DDMMAAAA.");
       return;
@@ -163,14 +163,12 @@ function login() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cpf: onlyDigits(cpf),
-          birth_date: convertPasswordToDate(password),
+          birth_date: onlyDigits(password),
         }),
       });
 
       let data = {};
-      const ct = res.headers.get("content-type") || "";
-      if (ct.includes("application/json")) data = await res.json();
-      else data = { ok: false, error: await res.text() };
+      try { data = await res.json(); } catch { data = {}; }
 
       if (res.ok && data.ok) {
         setSession({
@@ -368,23 +366,17 @@ async function createPayment(currentInvoice, method = "pix") {
   btnPay.textContent = "Gerando pagamento...";
 
   try {
-    // ✅ IMPORTANTE: barra final /pay/
-    const url = `${API_BASE}/invoices/${currentInvoice.id}/pay/`;
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ method })
+    const res = await fetch(`${API_BASE}/login/`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    cpf: onlyDigits(cpf),
+    birth_date: onlyDigits(password),
+  }),
     });
 
     let data = {};
-    const ct = res.headers.get("content-type") || "";
-    if (ct.includes("application/json")) {
-      data = await res.json();
-    } else {
-      const txt = await res.text();
-      data = { ok: false, error: txt || "Resposta inválida do servidor." };
-    }
+    try { data = await res.json(); } catch { data = {}; }
 
     if (!res.ok || !data.ok) {
       setMsg(payMsg, "is-error", data.error || "Erro ao criar pagamento.");
@@ -396,9 +388,7 @@ async function createPayment(currentInvoice, method = "pix") {
     const pixQrBase64 = data.pix_qr_base64 || "";
 
     qs("#pixCode").value = pixCopyPaste;
-    qs("#qrBox").innerHTML = pixQrBase64
-      ? buildQrImgFromBase64(pixQrBase64)
-      : `<div class="muted">QR não disponível.</div>`;
+    qs("#qrBox").innerHTML = pixQrBase64 ? buildQrImgFromBase64(pixQrBase64) : `<div class="muted">QR não disponível.</div>`;
 
     // BOLETO
     const boletoUrl = data.boleto_url || "";
@@ -431,6 +421,7 @@ async function createPayment(currentInvoice, method = "pix") {
     };
 
     openModal("#payModal");
+
   } catch (e) {
     setMsg(payMsg, "is-error", "Falha de conexão. Tente novamente.");
   } finally {
