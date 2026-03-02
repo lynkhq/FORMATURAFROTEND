@@ -28,20 +28,18 @@
       setMsg(msg, "is-error", "Preencha CPF e senha para continuar.");
       return;
     }
-    if (cpf.length !== 11) {
-      setMsg(msg, "is-error", "CPF inválido. Verifique e tente novamente.");
-      return;
-    }
 
     btn.disabled = true;
     btn.textContent = "Entrando...";
 
     try {
-      const data = await apiFetch("/login/", {
-        method: "POST",
-        body: JSON.stringify({ cpf, password }),
-      });
-
+const data = await apiFetch("/api/login/", {
+  method: "POST",
+  body: JSON.stringify({
+    cpf: onlyDigits(cpf),
+    birth_date: onlyDigits(password)
+  })
+});
       // Aceita vários formatos possíveis
       const token =
         data?.token ||
