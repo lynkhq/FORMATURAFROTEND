@@ -36,9 +36,6 @@
   const btnCard = qs("#btnCard");
   const confirmMsg = qs("#confirmMsg");
 
-  let currentInstallments = 0;
-  let previewOk = false;
-
   function setConfirmEnabled(enabled) {
     btnPix.disabled = !enabled;
     btnCard.disabled = !enabled;
@@ -46,7 +43,7 @@
 
   function renderPreviewRows(rows) {
     if (!Array.isArray(rows) || rows.length === 0) {
-      previewTbody.innerHTML = `<tr><td colspan="3" class="muted">Sem dados de preview.</td></tr>`;
+      previewTbody.innerHTML = `<tr><td colspan="3" class="muted">Sem dados para exibir.</td></tr>`;
       return;
     }
 
@@ -74,119 +71,88 @@
     }
   }
 
-  async function loadPlan() {
+  // ✅ Carrega tudo via /dashboard/<student_id>/
+  async function loadDashboardAndPlan() {
     setMsg(previewMsg, "is-info", "");
     setMsg(confirmMsg, "is-info", "");
+    setConfirmEnabled(false);
+
     previewBadge.className = "badge badge-info";
     previewBadge.textContent = "Carregando...";
 
     installmentsSelect.disabled = true;
-    setConfirmEnabled(false);
 
     try {
       const sid = getSession()?.student_id;
+      if (!sid) throw new Error("Sessão inválida. Faça login novamente.");
 
-      // ✅ tente com querystring (mais comum)
-      const data = await apiFetch(`/plan/for-student/?student_id=${encodeURIComponent(sid)}`, {
-        method: "GET",
-      });
+      // ✅ endpoint que EXISTE no seu backend
+      const data = await apiFetch(`/dashboard/${sid}/`, { method: "GET" });
 
-      const plan = data?.plan || data;
+      if (!data?.ok) throw new Error(data?.error || "Erro ao carregar dashboard.");
 
-      const total = plan?.total ?? plan?.plan_total ?? plan?.value_total ?? 0;
-      const dueDay = plan?.due_day ?? plan?.dueDay ?? "—";
-      const maxInstallments = Number(plan?.max_installments ?? plan?.maxInstallments ?? 1);
+      // "Plano" vem indireto do contract (plan_total, installments etc)
+      const contract = data.contract || {};
+      const student = data.student || {};
+      const invoices = Array.isArray(data.invoices) ? data.invoices : [];
 
       titleEl.textContent = "Plano";
-      subtitleEl.textContent = "Escolha parcelas e método";
-      planNameEl.textContent = plan?.name || `Plano da turma`;
-      planTotalEl.textContent = moneyBRL(total);
-      planDueDayEl.textContent = String(dueDay);
+      subtitleEl.textContent = "Escolha parcelas e gere pagamento";
+
+      planNameEl.textContent = `Plano da turma ${student?.turma || ""}`.trim() || "Plano";
+      planTotalEl.textContent = moneyBRL(contract?.plan_total ?? 0);
+
+      // Due day não vem no dashboard hoje → mostramos "—"
+      planDueDayEl.textContent = "—";
+
+      const maxInstallments = Number(contract?.installments ?? invoices.length ?? 1) || 1;
       planMaxInstallmentsEl.textContent = String(maxInstallments);
       planPillEl.textContent = `Máx: ${maxInstallments}x`;
 
       fillInstallmentsOptions(maxInstallments);
       installmentsSelect.disabled = false;
 
-      previewBadge.className = "badge badge-info";
-      previewBadge.textContent = "Selecione parcelas";
-    } catch (err) {
-      if (err.status === 401 || err.status === 403) {
-        clearSession();
-        window.location.href = "./login.html";
-        return;
-      }
-      previewBadge.className = "badge badge-danger";
-      previewBadge.textContent = "Erro";
-      setMsg(previewMsg, "is-error", err.message || "Erro ao carregar plano.");
-    }
-  }
-
-  async function loadPreview(installments) {
-    previewOk = false;
-    setConfirmEnabled(false);
-    setMsg(previewMsg, "is-info", "");
-    setMsg(confirmMsg, "is-info", "");
-
-    if (!installments || Number(installments) < 1) {
-      previewBadge.className = "badge badge-info";
-      previewBadge.textContent = "Selecione parcelas";
-      renderPreviewRows([]);
-      return;
-    }
-
-    previewBadge.className = "badge badge-info";
-    previewBadge.textContent = "Carregando preview...";
-    installmentsSelect.disabled = true;
-
-    try {
-      const sid = getSession()?.student_id;
-
-      const data = await apiFetch("/contract/preview/", {
-        method: "POST",
-        body: JSON.stringify({
-          student_id: sid,
-          installments: Number(installments),
-        }),
-      });
-
-      if (data?.ok === false) throw new Error(data?.error || "Não foi possível gerar preview.");
-
-      const schedule =
-        data?.schedule ||
-        data?.invoices ||
-        data?.installments_schedule ||
-        data?.preview ||
-        [];
-
-      renderPreviewRows(schedule);
-
-      previewOk = true;
+      // Preview: usa as invoices do dashboard
+      // (você pode mostrar tudo ou filtrar pelo número de parcelas)
       previewBadge.className = "badge badge-success";
-      previewBadge.textContent = "Preview OK";
-      setConfirmEnabled(true);
-    } catch (err) {
-      if (err.status === 401 || err.status === 403) {
-        clearSession();
-        window.location.href = "./login.html";
-        return;
+      previewBadge.textContent = "Carregado";
+
+      // já mostra a tabela completa (melhor do que “preview” que não existe)
+      renderPreviewRows(invoices.map(inv => ({
+        number: inv.number,
+        due_date: inv.due_date,
+        value: inv.value,
+      })));
+
+      // habilita botões de pagamento se tiver pelo menos 1 invoice aberta
+      const openInv = invoices.find(i => String(i.status || "").toLowerCase() !== "paid");
+      if (!openInv) {
+        setMsg(confirmMsg, "is-info", "Nenhuma fatura em aberto encontrada.");
+        setConfirmEnabled(false);
+      } else {
+        setMsg(confirmMsg, "is-info", "Escolha um método para gerar o pagamento da próxima parcela em aberto.");
+        setConfirmEnabled(true);
       }
+
+    } catch (err) {
       previewBadge.className = "badge badge-danger";
       previewBadge.textContent = "Erro";
-      setMsg(previewMsg, "is-error", err.message || "Erro ao gerar preview.");
+
+      const raw = String(err?.message || "");
+      const clean =
+        raw.includes("<!doctype") || raw.includes("<html")
+          ? "Endpoint não encontrado (verifique rotas do backend)."
+          : raw;
+
+      setMsg(previewMsg, "is-error", clean || "Erro ao carregar dados.");
       renderPreviewRows([]);
-    } finally {
-      installmentsSelect.disabled = false;
+      setConfirmEnabled(false);
     }
   }
 
-  async function confirmContract(payment_method) {
+  // ✅ Gera pagamento usando a primeira invoice em aberto
+  async function payNextOpenInvoice(method) {
     setMsg(confirmMsg, "is-info", "");
-
-    if (!previewOk || !currentInstallments) {
-      setMsg(confirmMsg, "is-error", "Selecione parcelas e aguarde o preview ficar OK antes de confirmar.");
-      return;
-    }
 
     btnPix.disabled = true;
     btnCard.disabled = true;
@@ -197,56 +163,56 @@
 
     try {
       const sid = getSession()?.student_id;
+      const dash = await apiFetch(`/dashboard/${sid}/`, { method: "GET" });
 
-      const data = await apiFetch("/contract/confirm/", {
-        method: "POST",
-        body: JSON.stringify({
-          student_id: sid,
-          installments: Number(currentInstallments),
-          payment_method,
-        }),
-      });
+      const invoices = Array.isArray(dash?.invoices) ? dash.invoices : [];
+      const openInv = invoices.find(i => String(i.status || "").toLowerCase() !== "paid");
 
-      if (data?.ok === false) throw new Error(data?.error || "Não foi possível confirmar contrato.");
-
-      const contractId =
-        data?.contract_id ||
-        data?.contractId ||
-        data?.id ||
-        data?.contract?.id ||
-        "";
-
-      if (contractId) localStorage.setItem("fi_contract_id", String(contractId));
-
-      setMsg(confirmMsg, "is-success", "Contrato confirmado! Redirecionando...");
-
-      if (payment_method === "pix") window.location.href = "./pix.html";
-      else window.location.href = "./card.html";
-    } catch (err) {
-      if (err.status === 401 || err.status === 403) {
-        clearSession();
-        window.location.href = "./login.html";
+      if (!openInv?.id) {
+        setMsg(confirmMsg, "is-error", "Nenhuma fatura em aberto para pagar.");
         return;
       }
-      setMsg(confirmMsg, "is-error", err.message || "Erro ao confirmar contrato.");
-      setConfirmEnabled(previewOk);
+
+      // ✅ endpoint que existe: /api/invoices/<id>/pay/
+      const pay = await apiFetch(`/invoices/${openInv.id}/pay/`, {
+        method: "POST",
+        body: JSON.stringify({ method }), // "pix" | "boleto"
+      });
+
+      if (!pay?.ok) throw new Error(pay?.error || "Não foi possível gerar pagamento.");
+
+      // Salva infos pra próxima tela (se você tiver pix.html / boleto.html)
+      localStorage.setItem("fi_last_payment", JSON.stringify(pay));
+
+      setMsg(confirmMsg, "is-success", "Pagamento gerado! Abrindo tela...");
+
+      if (method === "pix") window.location.href = "./pix.html";
+      else window.location.href = "./boleto.html"; // se não existir, troque ou remova
+
+    } catch (err) {
+      const raw = String(err?.message || "");
+      const clean =
+        raw.includes("<!doctype") || raw.includes("<html")
+          ? "Erro: rota não encontrada no backend."
+          : raw;
+
+      setMsg(confirmMsg, "is-error", clean || "Erro ao gerar pagamento.");
     } finally {
       btnPix.textContent = prevTextPix;
       btnCard.textContent = prevTextCard;
-      btnPix.disabled = !previewOk;
-      btnCard.disabled = !previewOk;
+      btnPix.disabled = false;
+      btnCard.disabled = false;
     }
   }
 
-  installmentsSelect?.addEventListener("change", async (e) => {
-    const v = Number(e.target.value || 0);
-    currentInstallments = v;
-    await loadPreview(v);
+  installmentsSelect?.addEventListener("change", () => {
+    // Como não existe preview real no backend, não fazemos nada aqui.
+    // Mantemos o select só como visual.
   });
 
-  btnPix?.addEventListener("click", () => confirmContract("pix"));
-  btnCard?.addEventListener("click", () => confirmContract("card"));
+  btnPix?.addEventListener("click", () => payNextOpenInvoice("pix"));
+  btnCard?.addEventListener("click", () => payNextOpenInvoice("boleto")); // você usa boleto no backend, não "card"
 
   // init
-  loadPlan();
+  loadDashboardAndPlan();
 })();
