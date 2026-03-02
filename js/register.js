@@ -14,27 +14,23 @@
     e.preventDefault();
     setMsg(msg, "is-info", "");
 
-    const payload = {
-      student_name: qs("#student_name")?.value?.trim(),
-      cpf: onlyDigits(qs("#cpf")?.value),
-      birth_date: qs("#birth_date")?.value, // YYYY-MM-DD
-      responsible_name: qs("#responsible_name")?.value?.trim(),
-      turma: qs("#turma")?.value?.trim(),
-      email: qs("#email")?.value?.trim(),
-      password: qs("#password")?.value || "",
-      // confirm_password removido
-    };
+    const student_name = qs("#student_name")?.value?.trim();
+    const cpf = onlyDigits(qs("#cpf")?.value);
+    const birth_date = qs("#birth_date")?.value; // YYYY-MM-DD (se você estiver usando input date)
+    const responsible_name = qs("#responsible_name")?.value?.trim();
+    const turma = qs("#turma")?.value?.trim();
+    const email = qs("#email")?.value?.trim();
+    const password = qs("#password")?.value || "";
 
-    // validações básicas
-    if (!payload.student_name || !payload.cpf || !payload.birth_date || !payload.responsible_name || !payload.turma || !payload.email) {
+    if (!student_name || !cpf || !birth_date || !responsible_name || !turma || !email || !password) {
       setMsg(msg, "is-error", "Preencha todos os campos obrigatórios.");
       return;
     }
-    if (payload.cpf.length !== 11) {
+    if (cpf.length !== 11) {
       setMsg(msg, "is-error", "CPF inválido.");
       return;
     }
-    if (payload.password.length < 6) {
+    if (password.length < 6) {
       setMsg(msg, "is-error", "Senha muito curta (mínimo 6 caracteres).");
       return;
     }
@@ -43,29 +39,34 @@
     btn.textContent = "Cadastrando...";
 
     try {
+      const payload = {
+        student_name,
+        cpf,
+        birth_date,
+        responsible_name,
+        turma,
+        email,
+        password,
+
+        // ✅ se o backend exigir confirm_password, enviamos igual
+        confirm_password: password,
+      };
+
       const data = await apiFetch("/register/", {
         method: "POST",
         body: JSON.stringify(payload),
       });
 
-      if (!data?.ok) {
+      if (data?.ok === false) {
         setMsg(msg, "is-error", data?.error || "Erro ao cadastrar.");
         return;
       }
 
-      setMsg(msg, "is-success", "Cadastro criado! Redirecionando para o login...");
-      setTimeout(() => window.location.href = "./login.html", 700);
-
+      setMsg(msg, "is-success", "Cadastro criado com sucesso! Redirecionando para login...");
+      setTimeout(() => window.location.href = "./login.html", 900);
     } catch (err) {
-      // mostra erro real do serializer
-      const errors = err?.data?.errors;
-      if (errors && typeof errors === "object") {
-        const k = Object.keys(errors)[0];
-        const v = Array.isArray(errors[k]) ? errors[k][0] : String(errors[k]);
-        setMsg(msg, "is-error", `${k}: ${v}`);
-      } else {
-        setMsg(msg, "is-error", err.message || "Falha de conexão.");
-      }
+      // Se for 400, normalmente vem serializer.errors (mas seu apiFetch joga err.message)
+      setMsg(msg, "is-error", err.message || "Falha de conexão. Tente novamente.");
     } finally {
       btn.disabled = false;
       btn.textContent = "Criar conta";
