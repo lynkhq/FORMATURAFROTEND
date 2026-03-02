@@ -1,17 +1,10 @@
-/* =========================================================
-   api.js — util de API (sem token)
-   Backend retorna { ok:true, student_id, student_name } no login
-========================================================= */
-
 (function () {
   const API_ORIGIN = "https://formatura-backend-production.up.railway.app";
-  const API_PREFIX = "/api";
-  const API_BASE = `${API_ORIGIN}${API_PREFIX}`;
+  const API_BASE = `${API_ORIGIN}/api`;
 
-  const SESSION_KEY = "fi_session"; // guarda {student_id, student_name}
+  const SESSION_KEY = "fi_session_v1"; // {student_id, student_name}
 
   function qs(sel) { return document.querySelector(sel); }
-
   function onlyDigits(str) { return String(str || "").replace(/\D/g, ""); }
 
   function formatCPF(value) {
@@ -32,11 +25,7 @@
   function setMsg(el, type, text) {
     if (!el) return;
     el.classList.remove("is-error", "is-success", "is-info");
-    if (!text) {
-      el.style.display = "none";
-      el.textContent = "";
-      return;
-    }
+    if (!text) { el.style.display = "none"; el.textContent = ""; return; }
     el.style.display = "block";
     el.classList.add(type);
     el.textContent = text;
@@ -53,6 +42,15 @@
     localStorage.removeItem(SESSION_KEY);
   }
 
+  function requireLogin() {
+    const s = getSession();
+    if (!s?.student_id) {
+      window.location.href = "./login.html";
+      return null;
+    }
+    return s;
+  }
+
   function normalizePath(path) {
     let p = String(path || "");
     if (!p.startsWith("/")) p = "/" + p;
@@ -60,22 +58,16 @@
   }
 
   async function apiFetch(path, options = {}) {
-    const session = getSession();
+    const url = `${API_BASE}${normalizePath(path)}`;
     const headers = Object.assign(
       { "Content-Type": "application/json" },
       options.headers || {}
     );
 
-    // Se o backend aceitar identificar aluno por header (opcional)
-    if (session?.student_id) headers["X-Student-Id"] = String(session.student_id);
-
-    const url = `${API_BASE}${normalizePath(path)}`;
-
     const res = await fetch(url, { ...options, headers });
 
     const ct = res.headers.get("content-type") || "";
     let data;
-
     if (ct.includes("application/json")) data = await res.json();
     else data = { ok: false, error: await res.text() };
 
@@ -87,18 +79,7 @@
       err.url = url;
       throw err;
     }
-
     return data;
-  }
-
-  // helper: exige login
-  function requireLogin() {
-    const s = getSession();
-    if (!s?.student_id) {
-      window.location.href = "./login.html";
-      return null;
-    }
-    return s;
   }
 
   window.API = {
