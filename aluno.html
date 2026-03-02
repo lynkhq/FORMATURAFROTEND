@@ -6,182 +6,122 @@
   <title>Formatura Ideal • Painel do Aluno</title>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body class="dash-bg">
-  <header class="dash-header">
-    <div class="container dash-top">
-      <div class="dash-user">
-        <div class="avatar" aria-hidden="true">👤</div>
-        <div>
-          <div class="muted">Aluno</div>
-          <div class="dash-name" id="studentName">—</div>
-          <div class="dash-class muted" id="studentClass">—</div>
-        </div>
-      </div>
-
-      <div class="dash-actions">
+<body>
+  <header class="header">
+    <div class="container row">
+      <a class="brand" href="./index.html">
+        <span class="mark">FI</span>
+        <span>Formatura Ideal</span>
+      </a>
+      <nav class="nav">
         <a class="btn btn-ghost" href="./index.html">Home</a>
-        <button class="btn btn-outline" id="btnLogout" type="button">Logout</button>
-      </div>
+        <button class="btn btn-outline" id="btnLogout" type="button">Sair</button>
+      </nav>
     </div>
   </header>
 
-  <main class="dash">
+  <main class="main">
     <div class="container">
-      <div class="dash-grid">
-        <!-- Resumo -->
-        <section class="card" aria-label="Resumo Financeiro">
-          <div class="card-head">
-            <div>
-              <div class="muted">Resumo Financeiro</div>
-              <div class="h3" id="planName">—</div>
-            </div>
-            <span class="pill" id="paidPercentPill">Quitado: —%</span>
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap">
+          <div>
+            <div class="muted">Aluno</div>
+            <div class="h2" id="studentName">—</div>
+            <div class="muted" id="studentClass">—</div>
           </div>
-
-          <div class="kpis">
-            <div class="kpi">
-              <div class="muted">Valor total</div>
-              <div class="kpi-value" id="totalValue">—</div>
-            </div>
-            <div class="kpi">
-              <div class="muted">Total pago</div>
-              <div class="kpi-value" id="paidValue">—</div>
-            </div>
-            <div class="kpi">
-              <div class="muted">Valor restante</div>
-              <div class="kpi-value" id="remainingValue">—</div>
-            </div>
+          <div>
+            <span class="chip" id="statusChip">Carregando…</span>
           </div>
+        </div>
 
-          <div class="progress-wrap">
-            <div class="progress" aria-label="Progresso de quitação">
-              <div class="progress-bar" id="progressBar" style="width:0%"></div>
-            </div>
-            <div class="progress-meta">
-              <span class="muted">Progresso</span>
-              <span class="muted" id="progressText">0%</span>
-            </div>
+        <hr>
+
+        <div class="kpis">
+          <div class="kpi">
+            <div class="muted">Total do plano</div>
+            <div class="v" id="kpiTotal">—</div>
           </div>
-        </section>
-
-        <!-- Fatura Atual -->
-        <section class="card" aria-label="Fatura Atual">
-          <div class="card-head">
-            <div>
-              <div class="muted">Fatura Atual</div>
-              <div class="h3">Cobrança do mês</div>
-            </div>
-            <span class="badge" id="currentStatusBadge">—</span>
+          <div class="kpi">
+            <div class="muted">Pago</div>
+            <div class="v" id="kpiPaid">—</div>
           </div>
-
-          <div class="invoice-box" id="currentInvoice">
-            <!-- preenchido via JS -->
+          <div class="kpi">
+            <div class="muted">Restante</div>
+            <div class="v" id="kpiRemaining">—</div>
           </div>
+        </div>
 
-          <div class="invoice-actions">
-            <button class="btn btn-primary" id="btnPayNow" type="button">
-              Pagar Agora
-            </button>
-            <div class="muted small">
-              Ao pagar, um modal exibirá Pix e boleto (simulado).
-            </div>
-          </div>
+        <div class="msg" id="dashMsg" role="alert" aria-live="polite"></div>
 
-          <div id="payMsg" class="form-msg" role="alert" aria-live="polite"></div>
-        </section>
+        <hr>
 
-        <!-- Histórico -->
-        <section class="card span-2" aria-label="Histórico de Parcelas">
-          <div class="card-head">
-            <div>
-              <div class="muted">Histórico de Parcelas</div>
-              <div class="h3">Parcelas</div>
-            </div>
-            <span class="pill" id="invoiceCount">—</span>
-          </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+          <div class="h2">Parcelas</div>
+          <button class="btn btn-primary" id="btnPayNow" type="button" disabled>Pagar próxima</button>
+        </div>
 
-          <div class="table-wrap">
-            <table class="table" id="invoicesTable">
-              <thead>
-                <tr>
-                  <th>Parcela</th>
-                  <th>Vencimento</th>
-                  <th>Valor</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- linhas via JS -->
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <div class="table-wrap" style="margin-top:12px">
+          <table>
+            <thead>
+              <tr>
+                <th>Parcela</th>
+                <th>Vencimento</th>
+                <th>Valor</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="invoicesBody">
+              <tr><td colspan="4" class="muted">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="small" style="margin-top:10px">
+          Observação: este painel usa <b>/api/dashboard/&lt;student_id&gt;/</b> (sem token) pra evitar conflito de autenticação.
+        </div>
       </div>
     </div>
   </main>
 
-  <!-- Modal Pagamento -->
+  <!-- Modal pagamento -->
   <div class="modal" id="payModal" aria-hidden="true">
-    <div class="modal-backdrop" data-close="true"></div>
-
-    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Pagamento">
-      <div class="modal-head">
-        <div>
-          <div class="muted">Pagamento</div>
-          <div class="h3">Finalize sua fatura</div>
-        </div>
-        <button class="icon-btn" type="button" data-close="true" aria-label="Fechar">✕</button>
+    <div class="box card">
+      <div class="head">
+        <div class="h2">Pagamento</div>
+        <button class="btn btn-ghost close" data-close="true" type="button">Fechar</button>
       </div>
 
-      <div class="modal-body">
-        <div class="pay-grid">
-          <div class="pay-qr card">
-            <div class="muted">QR Code Pix</div>
-            <div class="qr-box" id="qrBox" aria-label="Imagem de QR code (simulada)">
-              <!-- QR via JS -->
-            </div>
-            <div class="muted small">
-              Use o app do banco para escanear.
-            </div>
-          </div>
+      <div class="msg" id="payMsg"></div>
 
-          <div class="pay-info">
-            <div class="card">
-              <div class="muted">Pix copia e cola</div>
-              <div class="copy-row">
-                <input id="pixCode" type="text" readonly />
-                <button class="btn btn-outline btn-small" id="btnCopyPix" type="button">Copiar</button>
-              </div>
-              <div id="copyMsg" class="form-msg small" aria-live="polite"></div>
-            </div>
-
-            <div class="card">
-              <div class="muted">Boleto</div>
-              <a class="btn btn-ghost btn-block" id="boletoLink" href="#" target="_blank" rel="noopener">
-                Abrir link do boleto →
-              </a>
-              <div class="muted small">
-                Link demonstrativo (mock).
-              </div>
-            </div>
-
-            <div class="card glass">
-              <div class="muted">Detalhes da fatura</div>
-              <div class="pay-meta" id="payMeta">—</div>
-            </div>
-          </div>
-        </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 14px">
+        <button class="btn btn-primary" id="btnPayPix" type="button">Gerar Pix</button>
+        <button class="btn btn-outline" id="btnPayBoleto" type="button">Gerar Boleto</button>
       </div>
 
-      <div class="modal-foot">
-        <button class="btn btn-ghost" type="button" data-close="true">Fechar</button>
+      <hr>
+
+      <div class="h2" style="margin-bottom:8px">Pix</div>
+      <div class="field">
+        <span class="label">Copia e Cola</span>
+        <input id="pixCopy" type="text" readonly>
+        <button class="btn" id="btnCopyPix" type="button">Copiar</button>
       </div>
+
+      <div style="margin-top:12px">
+        <div class="label">QR Code</div>
+        <div id="qrBox" class="card" style="padding:12px; display:flex; justify-content:center"></div>
+      </div>
+
+      <hr>
+
+      <div class="h2" style="margin-bottom:8px">Boleto</div>
+      <a class="btn btn-outline" id="boletoLink" href="#" target="_blank" rel="noreferrer">Abrir boleto</a>
+
+      <div class="small" style="margin-top:10px" id="payMeta"></div>
     </div>
   </div>
 
-  <script src="./js/app.js"></script>
-  <script>
-    loadDashboard();
-  </script>
+  <script src="./js/api.js"></script>
+  <script src="./js/aluno.js"></script>
 </body>
 </html>
