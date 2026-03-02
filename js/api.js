@@ -1,7 +1,11 @@
+/* =========================================================
+   api.js — util de API (SEM cookies)
+   - Login retorna { ok:true, student_id, student_name }
+   - O front salva student_id no localStorage e usa dashboard por id
+========================================================= */
 (function () {
   const API_ORIGIN = "https://formatura-backend-production.up.railway.app";
   const API_BASE = `${API_ORIGIN}/api`;
-
   const SESSION_KEY = "fi_session_v1"; // {student_id, student_name}
 
   function qs(sel) { return document.querySelector(sel); }
@@ -64,12 +68,25 @@
       options.headers || {}
     );
 
-    const res = await fetch(url, { ...options, headers });
+    // (Opcional) manda student_id no header, se você quiser usar em endpoints futuros
+    const session = getSession();
+    if (session?.student_id) headers["X-Student-Id"] = String(session.student_id);
+
+    let res;
+    try {
+      res = await fetch(url, { ...options, headers });
+    } catch (e) {
+      // aqui cai CORS/sem rede
+      throw new Error("Falha de conexão (CORS ou internet). Verifique CORS no backend e tente novamente.");
+    }
 
     const ct = res.headers.get("content-type") || "";
     let data;
-    if (ct.includes("application/json")) data = await res.json();
-    else data = { ok: false, error: await res.text() };
+    if (ct.includes("application/json")) {
+      data = await res.json();
+    } else {
+      data = { ok: false, error: await res.text() };
+    }
 
     if (!res.ok) {
       const msg = data?.error || data?.detail || `Erro (${res.status}).`;
