@@ -149,24 +149,21 @@ function login() {
     //  setMsg(msg, "is-error", "CPF inválido. Verifique e tente novamente.");
     //  return;
    // }
-    if (onlyDigits(password).length !== 8) {
-      setMsg(msg, "is-error", "A senha deve ser a data de nascimento no formato DDMMAAAA.");
-      return;
-    }
+  
 
     btn.disabled = true;
     btn.textContent = "Entrando...";
 
     try {
       const res = await fetch(`${API_BASE}/login/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cpf: onlyDigits(cpf),
-          birth_date: onlyDigits(password),
-        }),
-      });
-
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",  // 👈 ADICIONE ESTA LINHA
+  body: JSON.stringify({
+    cpf: onlyDigits(cpf),
+    password: onlyDigits(password),
+  }),
+});
       let data = {};
       try { data = await res.json(); } catch { data = {}; }
 
@@ -209,7 +206,9 @@ async function loadDashboard() {
 
   let payload;
   try {
-    const res = await fetch(`${API_BASE}/dashboard/${session.student_id}/`);
+    const res = await fetch(`${API_BASE}/dashboard/${session.student_id}/`, {
+  credentials: "include"
+});
     payload = await res.json();
 
     if (!res.ok || !payload.ok) {
@@ -360,23 +359,25 @@ function buildQrImgFromBase64(base64) {
 async function createPayment(currentInvoice, method = "pix") {
   const payMsg = qs("#payMsg");
   const btnPay = qs("#btnPayNow");
+
   setMsg(payMsg, "is-info", "");
 
   btnPay.disabled = true;
   btnPay.textContent = "Gerando pagamento...";
 
   try {
-    const res = await fetch(`${API_BASE}/login/`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    cpf: onlyDigits(cpf),
-    birth_date: onlyDigits(password),
-  }),
+    const res = await fetch(`${API_BASE}/invoices/${currentInvoice.id}/pay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ method }),
     });
 
     let data = {};
-    try { data = await res.json(); } catch { data = {}; }
+    try {
+      data = await res.json();
+    } catch {
+      data = {};
+    }
 
     if (!res.ok || !data.ok) {
       setMsg(payMsg, "is-error", data.error || "Erro ao criar pagamento.");
@@ -388,11 +389,15 @@ async function createPayment(currentInvoice, method = "pix") {
     const pixQrBase64 = data.pix_qr_base64 || "";
 
     qs("#pixCode").value = pixCopyPaste;
-    qs("#qrBox").innerHTML = pixQrBase64 ? buildQrImgFromBase64(pixQrBase64) : `<div class="muted">QR não disponível.</div>`;
+    qs("#qrBox").innerHTML =
+      pixQrBase64
+        ? buildQrImgFromBase64(pixQrBase64)
+        : `<div class="muted">QR não disponível.</div>`;
 
     // BOLETO
     const boletoUrl = data.boleto_url || "";
     const boletoLink = qs("#boletoLink");
+
     boletoLink.href = boletoUrl || "#";
     boletoLink.style.pointerEvents = boletoUrl ? "auto" : "none";
     boletoLink.style.opacity = boletoUrl ? "1" : ".6";
