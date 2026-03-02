@@ -1,17 +1,18 @@
 /* =========================================================
-   api.js — util de API com token (Prompt 3)
-   Endpoints esperados:
+   api.js — util de API com token (produção GitHub Pages)
+   Endpoints:
    - POST /api/login/
    - POST /api/register/
    - GET  /api/plan/for-student/   (Authorization: Bearer <token>)
    - POST /api/contract/preview/   { installments }
-   - POST /api/contract/confirm/   { installments, payment_method: "pix"|"card" }
+   - POST /api/contract/confirm/   { installments, payment_method }
 ========================================================= */
 
 (function () {
-  // Se você já usa um domínio fixo, ajuste aqui.
-  // Mantive o mesmo padrão do app.js anterior (Railway), mas você pode trocar.
-  const API_BASE = "https://formatura-backend-production.up.railway.app/api";
+  // ✅ Backend Railway
+  const API_ORIGIN = "https://formatura-backend-production.up.railway.app";
+  const API_PREFIX = "/api"; // mantém /api separado pra evitar erro de concatenação
+  const API_BASE = `${API_ORIGIN}${API_PREFIX}`;
 
   const TOKEN_KEY = "fi_token";
 
@@ -63,6 +64,13 @@
     localStorage.removeItem(TOKEN_KEY);
   }
 
+  function normalizePath(path) {
+    // garante que path começa com "/"
+    let p = String(path || "");
+    if (!p.startsWith("/")) p = "/" + p;
+    return p;
+  }
+
   async function apiFetch(path, options = {}) {
     const token = getToken();
     const headers = Object.assign(
@@ -70,37 +78,51 @@
       options.headers || {}
     );
 
-    // Só injeta Authorization se tiver token
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch(`${API_BASE}${path}`, {
+    const url = `${API_BASE}${normalizePath(path)}`;
+
+    const res = await fetch(url, {
       ...options,
-      headers
+      headers,
     });
 
     const ct = res.headers.get("content-type") || "";
-    let data = null;
+    let data;
 
+    // tenta JSON, senão texto
     if (ct.includes("application/json")) {
-      data = await res.json();
+      try {
+        data = await res.json();
+      } catch {
+        data = { ok: false, error: "Resposta JSON inválida." };
+      }
     } else {
       const txt = await res.text();
       data = { ok: false, error: txt };
     }
 
     if (!res.ok) {
-      const msg = data?.error || data?.detail || "Erro na requisição.";
+      // tenta extrair msg útil
+      const msg =
+        data?.error ||
+        data?.detail ||
+        (typeof data === "string" ? data : "") ||
+        `Erro na requisição (${res.status}).`;
+
       const err = new Error(msg);
       err.status = res.status;
       err.data = data;
+      err.url = url;
       throw err;
     }
 
     return data;
   }
 
-  // Exporta no window (sem bundler)
+  // Exporta no window
   window.API = {
+    API_ORIGIN,
     API_BASE,
     qs,
     onlyDigits,
