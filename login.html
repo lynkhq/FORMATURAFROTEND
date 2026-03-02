@@ -6,90 +6,47 @@
   <title>Formatura Ideal • Login</title>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body class="auth-bg">
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="brand" href="./index.html" aria-label="Formatura Ideal - Home">
-        <span class="brand-mark" aria-hidden="true">FI</span>
-        <span class="brand-name">Formatura Ideal</span>
+<body>
+  <header class="header">
+    <div class="container row">
+      <a class="brand" href="./index.html">
+        <span class="mark">FI</span>
+        <span>Formatura Ideal</span>
       </a>
-
       <nav class="nav">
-        <a class="nav-link" href="./index.html">Home</a>
-        <a class="nav-link nav-cta" href="./login.html" aria-current="page">Área do Aluno</a>
+        <a class="btn btn-ghost" href="./index.html">Home</a>
+        <a class="btn btn-outline" href="./register.html">Cadastro</a>
       </nav>
     </div>
   </header>
 
-  <main class="auth">
-    <div class="container auth-grid">
-      <section class="auth-aside">
+  <main class="main">
+    <div class="container grid">
+      <section class="card">
         <span class="chip">Área do Aluno</span>
-        <h1>Acesse com CPF e senha</h1>
-        <p class="muted">
-          Entre com seu CPF e sua senha cadastrada. Após login, você seguirá para o checkout
-          para escolher parcelas e método de pagamento.
-        </p>
-
-        <div class="card auth-tip">
-          <div class="h4">Não tem conta?</div>
-          <p class="muted">
-            Faça seu cadastro completo para criar acesso.
-          </p>
-          <a class="btn btn-primary" href="./register.html">Criar conta →</a>
-        </div>
+        <h1 class="h1">Entrar</h1>
+        <p class="muted">Use seu CPF e a senha criada no cadastro.</p>
+        <p class="small">Dica: se estiver indo direto sem querer, limpe a sessão no botão “Sair” do painel ou na Home.</p>
       </section>
 
-      <section class="card auth-card" aria-label="Formulário de login">
-        <div class="card-head">
-          <div>
-            <div class="muted">Login</div>
-            <div class="h3">Bem-vindo(a)</div>
-          </div>
-          <span class="badge badge-info">Seguro</span>
-        </div>
-
-        <form id="loginForm" class="form" novalidate>
+      <section class="card">
+        <div class="h2">Login</div>
+        <form id="loginForm" class="form" novalidate style="margin-top:12px">
           <label class="field">
             <span class="label">CPF</span>
-            <input
-              id="cpf"
-              name="cpf"
-              type="text"
-              inputmode="numeric"
-              autocomplete="username"
-              placeholder="000.000.000-00"
-              maxlength="14"
-              required
-            />
-            <span class="hint">Digite seu CPF (com ou sem pontuação).</span>
+            <input id="cpf" type="text" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" required>
           </label>
 
           <label class="field">
             <span class="label">Senha</span>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="Sua senha"
-              required
-            />
-            <span class="hint">Use a senha criada no cadastro.</span>
+            <input id="password" type="password" placeholder="Sua senha" required>
           </label>
 
-          <button class="btn btn-primary btn-block" id="btnLogin" type="submit">
-            Entrar
-          </button>
+          <button class="btn btn-primary btn-block" id="btnLogin" type="submit">Entrar</button>
+          <div class="msg" id="loginMsg" role="alert" aria-live="polite"></div>
 
-          <div id="loginMsg" class="form-msg" role="alert" aria-live="polite"></div>
-
-          <div class="auth-foot muted">
-            Ao entrar, você concorda com as políticas de uso do sistema.
-          </div>
-
-          <div class="divider"></div>
-          <a class="btn btn-ghost btn-block" href="./register.html">Não tenho conta • Cadastrar</a>
+          <hr>
+          <a class="btn btn-outline btn-block" href="./register.html">Não tenho conta • Cadastrar</a>
         </form>
       </section>
     </div>
