@@ -1,5 +1,5 @@
 (function () {
-  const { qs, formatCPF, onlyDigits, setMsg, apiFetch, setToken, getToken } = window.API;
+  const { qs, formatCPF, onlyDigits, setMsg, apiFetch } = window.API;
 
   const form = qs("#loginForm");
   const cpfInput = qs("#cpf");
@@ -7,8 +7,16 @@
   const msg = qs("#loginMsg");
   const btn = qs("#btnLogin");
 
-  // Se já tem token, vai direto pro checkout
-  if (getToken()) {
+  // ✅ sessão simples (porque seu backend não manda token)
+  const SESSION_KEY = "fi_session";
+  const getSession = () => {
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "{}"); }
+    catch { return {}; }
+  };
+  const setSession = (s) => localStorage.setItem(SESSION_KEY, JSON.stringify(s || {}));
+
+  // Se já tem sessão, vai direto pro checkout
+  if (getSession()?.student_id) {
     window.location.href = "./checkout.html";
     return;
   }
@@ -21,11 +29,15 @@
     e.preventDefault();
     setMsg(msg, "is-info", "");
 
-    const cpf = onlyDigits(cpfInput.value);
-    const password = passInput.value;
+    const cpf = onlyDigits(cpfInput?.value);
+    const password = passInput?.value; // sua API aceita password? (vamos usar como está)
 
-    if (!cpf || !password) {
-      setMsg(msg, "is-error", "Preencha CPF e senha para continuar.");
+    if (!cpf || cpf.length !== 11) {
+      setMsg(msg, "is-error", "CPF inválido.");
+      return;
+    }
+    if (!password) {
+      setMsg(msg, "is-error", "Preencha a senha para continuar.");
       return;
     }
 
@@ -33,33 +45,32 @@
     btn.textContent = "Entrando...";
 
     try {
-const data = await apiFetch("/api/login/", {
-  method: "POST",
-  body: JSON.stringify({
-    cpf: onlyDigits(cpf),
-    birth_date: onlyDigits(password)
-  })
-});
-      // Aceita vários formatos possíveis
-      const token =
-        data?.token ||
-        data?.access ||
-        data?.jwt ||
-        data?.access_token ||
-        data?.data?.token ||
-        "";
+      // ✅ IMPORTANTE: como API_BASE já tem /api, aqui é só "/login/"
+      const data = await apiFetch("/login/", {
+        method: "POST",
+        body: JSON.stringify({ cpf, password }),
+      });
 
-      if (!token) {
-        // Se backend retornar {ok:false,error:"..."}
-        const errMsg = data?.error || "Login OK, mas token não veio na resposta.";
-        setMsg(msg, "is-error", errMsg);
+      if (!data?.ok || !data?.student_id) {
+        setMsg(msg, "is-error", data?.error || "Login não autorizado.");
         return;
       }
 
-      setToken(token);
-      window.location.href = "./checkout.html";
+      // ✅ salva “sessão”
+      setSession({ student_id: data.student_id, student_name: data.student_name });
+
+      setMsg(msg, "is-success", `Bem-vindo(a), ${data.student_name || "aluno"}!`);
+      setTimeout(() => {
+        window.location.href = "./checkout.html";
+      }, 300);
     } catch (err) {
-      setMsg(msg, "is-error", err.message || "Falha de conexão. Tente novamente.");
+      const raw = String(err?.message || "");
+      const clean =
+        raw.includes("<!doctype") || raw.includes("<html")
+          ? "Endpoint não encontrado (verifique a URL do backend)."
+          : raw;
+
+      setMsg(msg, "is-error", clean || "Falha de conexão. Tente novamente.");
     } finally {
       btn.disabled = false;
       btn.textContent = "Entrar";
