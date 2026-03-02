@@ -6,98 +6,82 @@
   <title>Formatura Ideal • Cadastro</title>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body class="auth-bg">
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="brand" href="./index.html" aria-label="Formatura Ideal - Home">
-        <span class="brand-mark" aria-hidden="true">FI</span>
-        <span class="brand-name">Formatura Ideal</span>
+<body>
+  <header class="header">
+    <div class="container row">
+      <a class="brand" href="./index.html">
+        <span class="mark">FI</span>
+        <span>Formatura Ideal</span>
       </a>
-
       <nav class="nav">
-        <a class="nav-link" href="./index.html">Home</a>
-        <a class="nav-link nav-cta" href="./login.html">Área do Aluno</a>
+        <a class="btn btn-ghost" href="./index.html">Home</a>
+        <a class="btn btn-primary" href="./login.html">Área do Aluno</a>
       </nav>
     </div>
   </header>
 
-  <main class="auth">
-    <div class="container auth-grid">
-      <section class="auth-aside">
+  <main class="main">
+    <div class="container grid">
+      <section class="card">
         <span class="chip">Cadastro Completo</span>
-        <h1>Crie seu acesso</h1>
-        <p class="muted">
-          Preencha seus dados. Após cadastrar, você será redirecionado para o login.
-        </p>
-
-        <div class="card auth-tip">
-          <div class="h4">Atenção</div>
-          <p class="muted">
-            Use um e-mail válido e crie uma senha. O CPF deve ser real e válido.
-          </p>
+        <h1 class="h1">Crie seu acesso</h1>
+        <p class="muted">Depois do cadastro, você já pode entrar e ver seu painel.</p>
+        <div class="card" style="margin-top:12px">
+          <div class="h2">Atenção</div>
+          <p class="muted">A turma precisa existir no admin em <b>ClassPlan</b>. Se não existir, o backend pode responder erro.</p>
         </div>
       </section>
 
-      <section class="card auth-card" aria-label="Formulário de cadastro">
-        <div class="card-head">
-          <div>
-            <div class="muted">Cadastro</div>
-            <div class="h3">Dados do aluno</div>
-          </div>
-          <span class="badge badge-info">Seguro</span>
-        </div>
+      <section class="card">
+        <div class="h2">Dados do aluno</div>
 
-        <form id="registerForm" class="form" novalidate>
+        <form id="registerForm" class="form" novalidate style="margin-top:12px">
           <label class="field">
             <span class="label">Nome do aluno</span>
-            <input id="student_name" name="student_name" type="text" placeholder="Nome completo" required />
+            <input id="student_name" type="text" placeholder="Nome completo" required>
           </label>
 
-<label class="field">
-  <span class="label">Turma</span>
-  <select id="turma" name="turma" required
-    style="width:100%; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:#000; color:#fff;">
-    <option value="">Selecione a turma...</option>
-    <option value="Terceirão">Terceirão</option>
-    
-  </select>
-  <span class="hint">Escolha exatamente a turma cadastrada no sistema.</span>
-</label>
+          <label class="field">
+            <span class="label">Turma</span>
+            <input id="turma" type="text" placeholder="Ex.: Terceirão" required>
+            <span class="hint">Tem que bater com o ClassPlan do admin.</span>
+          </label>
 
           <label class="field">
             <span class="label">Data de nascimento</span>
-            <input id="birth_date" name="birth_date" type="date" required />
-            <span class="hint">Formato: DD-MM-AAA .</span>
+            <input id="birth_date" type="date" required>
           </label>
 
           <label class="field">
             <span class="label">Nome do responsável</span>
-            <input id="responsible_name" name="responsible_name" type="text" placeholder="Nome do responsável" required />
+            <input id="responsible_name" type="text" placeholder="Nome do responsável" required>
           </label>
 
-
+          <label class="field">
+            <span class="label">CPF</span>
+            <input id="cpf" type="text" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" required>
+          </label>
 
           <label class="field">
             <span class="label">E-mail</span>
-            <input id="email" name="email" type="email" placeholder="email@exemplo.com" required />
+            <input id="email" type="email" placeholder="email@exemplo.com" required>
           </label>
 
           <label class="field">
             <span class="label">Senha</span>
-            <input id="password" name="password" type="password" placeholder="Crie uma senha" minlength="6" required />
-            <span class="hint">Mínimo recomendado: 6 caracteres.</span>
+            <input id="password" type="password" minlength="6" placeholder="Crie uma senha" required>
           </label>
 
+          <label class="field">
+            <span class="label">Confirmar senha</span>
+            <input id="confirm_password" type="password" minlength="6" placeholder="Repita a senha" required>
+          </label>
 
+          <button class="btn btn-primary btn-block" id="btnRegister" type="submit">Criar conta</button>
+          <div class="msg" id="registerMsg" role="alert" aria-live="polite"></div>
 
-          <button class="btn btn-primary btn-block" id="btnRegister" type="submit">
-            Criar conta
-          </button>
-
-          <div id="registerMsg" class="form-msg" role="alert" aria-live="polite"></div>
-
-          <div class="divider"></div>
-          <a class="btn btn-ghost btn-block" href="./login.html">Já tenho conta • Entrar</a>
+          <hr>
+          <a class="btn btn-outline btn-block" href="./login.html">Já tenho conta • Entrar</a>
         </form>
       </section>
     </div>
@@ -106,7 +90,4 @@
   <script src="./js/api.js"></script>
   <script src="./js/register.js"></script>
 </body>
-
 </html>
-
-
