@@ -22,9 +22,10 @@
       turma: qs("#turma")?.value?.trim(),
       email: qs("#email")?.value?.trim(),
       password: qs("#password")?.value || "",
-      confirm_password: qs("#confirm_password")?.value || "",
+      // confirm_password removido
     };
 
+    // validações básicas
     if (!payload.student_name || !payload.cpf || !payload.birth_date || !payload.responsible_name || !payload.turma || !payload.email) {
       setMsg(msg, "is-error", "Preencha todos os campos obrigatórios.");
       return;
@@ -35,10 +36,6 @@
     }
     if (payload.password.length < 6) {
       setMsg(msg, "is-error", "Senha muito curta (mínimo 6 caracteres).");
-      return;
-    }
-    if (payload.password !== payload.confirm_password) {
-      setMsg(msg, "is-error", "As senhas não coincidem.");
       return;
     }
 
@@ -60,6 +57,7 @@
       setTimeout(() => window.location.href = "./login.html", 700);
 
     } catch (err) {
+      // mostra erro real do serializer
       const errors = err?.data?.errors;
       if (errors && typeof errors === "object") {
         const k = Object.keys(errors)[0];
