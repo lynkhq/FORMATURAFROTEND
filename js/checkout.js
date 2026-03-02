@@ -1,24 +1,15 @@
 (function () {
-  const {
-    qs,
-    setMsg,
-    moneyBRL,
-    apiFetch,
-    getToken,
-    clearToken
-  } = window.API;
+  const { qs, setMsg, moneyBRL, apiFetch, clearSession, requireLogin, getSession } = window.API;
+
+  // exige sessão
+  const session = requireLogin();
+  if (!session) return;
 
   const btnLogout = qs("#btnLogout");
   btnLogout?.addEventListener("click", () => {
-    clearToken();
+    clearSession();
     window.location.href = "./login.html";
   });
-
-  // exige token
-  if (!getToken()) {
-    window.location.href = "./login.html";
-    return;
-  }
 
   const planNameEl = qs("#planName");
   const planTotalEl = qs("#planTotal");
@@ -87,11 +78,20 @@
     setConfirmEnabled(false);
 
     try {
-      const data = await apiFetch("/plan/for-student/", { method: "GET" });
+      // ✅ Como o backend pode precisar saber "qual aluno",
+      // a gente já injeta X-Student-Id no apiFetch (via api.js),
+      // mas também envio no query/body caso seu backend use isso.
+      const sid = getSession()?.student_id;
 
-      // Aceita formatos:
-      // { total, due_day, max_installments, ... }
-      // { ok:true, plan:{...} }
+      // tenta GET padrão
+      let data;
+      try {
+        data = await apiFetch("/plan/for-student/", { method: "GET" });
+      } catch (e) {
+        // fallback: alguns backends usam query param
+        data = await apiFetch(`/plan/for-student/?student_id=${encodeURIComponent(sid)}`, { method: "GET" });
+      }
+
       currentPlan = data?.plan || data;
 
       const total = currentPlan?.total ?? currentPlan?.plan_total ?? currentPlan?.value_total ?? 0;
@@ -114,17 +114,17 @@
       previewBadge.className = "badge badge-info";
       previewBadge.textContent = "Selecione parcelas";
     } catch (err) {
-      // se token expirou
-      if (err.status === 401) {
-        clearToken();
+      // Sem token agora: se falhar, manda pro login
+      // (pode ser sessão ausente ou backend recusou)
+      if (err.status === 401 || err.status === 403) {
+        clearSession();
         window.location.href = "./login.html";
         return;
       }
+
       previewBadge.className = "badge badge-danger";
       previewBadge.textContent = "Erro";
       setMsg(previewMsg, "is-error", err.message || "Erro ao carregar plano.");
-    } finally {
-      // nada
     }
   }
 
@@ -146,9 +146,14 @@
     installmentsSelect.disabled = true;
 
     try {
+      const sid = getSession()?.student_id;
+
       const data = await apiFetch("/contract/preview/", {
         method: "POST",
-        body: JSON.stringify({ installments: Number(installments) }),
+        body: JSON.stringify({
+          student_id: sid,                // ✅ envia também no body (se backend precisar)
+          installments: Number(installments),
+        }),
       });
 
       if (data?.ok === false) {
@@ -167,10 +172,14 @@
       previewOk = true;
       previewBadge.className = "badge badge-success";
       previewBadge.textContent = "Preview OK";
-
-      // Bloqueia confirmar se inválido (requisito)
       setConfirmEnabled(true);
     } catch (err) {
+      if (err.status === 401 || err.status === 403) {
+        clearSession();
+        window.location.href = "./login.html";
+        return;
+      }
+
       previewBadge.className = "badge badge-danger";
       previewBadge.textContent = "Erro";
       setMsg(previewMsg, "is-error", err.message || "Erro ao gerar preview.");
@@ -184,7 +193,6 @@
     setMsg(confirmMsg, "is-info", "");
     setMsg(previewMsg, "is-info", "");
 
-    // Bloquear “Confirmar” se inválido (requisito)
     if (!previewOk || !currentInstallments) {
       setMsg(confirmMsg, "is-error", "Selecione parcelas e aguarde o preview ficar OK antes de confirmar.");
       return;
@@ -198,11 +206,14 @@
     btnCard.textContent = "Processando...";
 
     try {
+      const sid = getSession()?.student_id;
+
       const data = await apiFetch("/contract/confirm/", {
         method: "POST",
         body: JSON.stringify({
+          student_id: sid,                 // ✅ envia também no body
           installments: Number(currentInstallments),
-          payment_method
+          payment_method,
         }),
       });
 
@@ -217,20 +228,16 @@
         data?.contract?.id ||
         "";
 
-      if (!contractId) {
-        setMsg(confirmMsg, "is-success", "Contrato confirmado! (sem contract_id na resposta)");
-      } else {
-        localStorage.setItem("fi_contract_id", String(contractId));
-        setMsg(confirmMsg, "is-success", `Contrato confirmado! contract_id: ${contractId}`);
-      }
+      if (contractId) localStorage.setItem("fi_contract_id", String(contractId));
 
-      // Redireciona (placeholder)
+      setMsg(confirmMsg, "is-success", "Contrato confirmado! Redirecionando...");
+
       if (payment_method === "pix") window.location.href = "./pix.html";
       else window.location.href = "./card.html";
 
     } catch (err) {
-      if (err.status === 401) {
-        clearToken();
+      if (err.status === 401 || err.status === 403) {
+        clearSession();
         window.location.href = "./login.html";
         return;
       }
